@@ -3,9 +3,12 @@ package com.eeck.server
 import com.eeck.server.chat.ChatService
 import com.eeck.server.chat.chatLinkRoutes
 import com.eeck.server.common.ErrorResponse
+import com.eeck.server.realtime.ChatRoomRegistry
+import com.eeck.server.realtime.chatWebSocket
 import com.eeck.server.session.InMemorySessionStore
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -22,6 +25,7 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 fun main() {
     embeddedServer(Netty, port = 3001, module = Application::module).start(wait = true)
@@ -44,9 +48,14 @@ fun Application.module() {
             call.respond(status, ErrorResponse("Not found"))
         }
     }
-    install(WebSockets)
+    install(WebSockets) {
+        contentConverter = KotlinxWebsocketSerializationConverter(Json)
+        pingPeriodMillis = 15_000
+        timeoutMillis = 30_000
+    }
 
     val chatService = ChatService(InMemorySessionStore())
+    val chatRoomRegistry = ChatRoomRegistry()
 
     routing {
         route("/api") {
@@ -55,6 +64,7 @@ fun Application.module() {
             }
             chatLinkRoutes(chatService)
         }
+        chatWebSocket(chatRoomRegistry)
     }
 }
 
