@@ -21,7 +21,7 @@ describe('ChatSession dispose-during-start race', () => {
         const statusEvents: string[] = []
         const session = new ChatSession(chatId, 'ghost-user', {
             onMessage: () => {},
-            onPeerOnlineChange: () => {},
+            onPeersChange: () => {},
             onKeysExchangedChange: () => {},
             onConnectionStatusChange: (s) => statusEvents.push(s),
         })

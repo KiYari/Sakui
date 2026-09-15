@@ -8,16 +8,26 @@ interface KeyAnnouncement {
     spki: string
 }
 
+/**
+ * A chat envelope addressed to one recipient. The server broadcasts every
+ * `message` frame to all other participants, so a room with more than one
+ * peer carries several `recipient`-tagged envelopes per plaintext message —
+ * each peer decrypts only the one addressed to its own userId.
+ */
+type AddressedEnvelope = ChatEnvelope & { recipient: string }
+
 export interface ChatMessage {
     id: string
-    sender: 'me' | 'peer'
+    /** 'me', or the sending peer's userId. */
+    sender: string
     text: string
     timestamp: number
 }
 
 export interface ChatSessionCallbacks {
     onMessage: (message: ChatMessage) => void
-    onPeerOnlineChange: (online: boolean) => void
+    /** userIds of the currently connected peers (excluding ourselves). */
+    onPeersChange: (peerIds: string[]) => void
     onKeysExchangedChange: (exchanged: boolean) => void
     onConnectionStatusChange: (status: ConnectionStatus) => void
 }
@@ -28,12 +38,16 @@ export interface ChatSessionCallbacks {
  * chat protocol: key announcement/exchange, then encrypt-before-send /
  * decrypt-on-receive. `E2eeClient` itself never sees plaintext or key
  * material — it only ever moves JSON frames.
+ *
+ * Any number of peers may share a room: each outgoing message is encrypted
+ * separately per peer (fan-out) since the crypto primitives are single-recipient.
  */
 export class ChatSession {
     private client = new E2eeClient()
     private privateKey: CryptoKey | undefined
     private myPublicKeySpki: string | undefined
-    private peerPublicKey: CryptoKey | undefined
+    private onlinePeerIds = new Set<string>()
+    private peerPublicKeys = new Map<string, CryptoKey>()
     /**
      * Guards against a dispose() that lands while start() is still awaiting
      * (e.g. React StrictMode's dev-only mount -> cleanup -> remount, which
@@ -72,11 +86,15 @@ export class ChatSession {
     }
 
     async sendMessage(text: string): Promise<void> {
-        if (!this.peerPublicKey) {
-            throw new Error('Cannot send: keys have not been exchanged with the peer yet.')
+        const recipients = [...this.peerPublicKeys.entries()]
+        if (recipients.length === 0) {
+            throw new Error('Cannot send: keys have not been exchanged with any peer yet.')
         }
-        const envelope = await encryptMessage(text, this.peerPublicKey)
-        this.client.send({ type: 'message', body: envelope as unknown as JsonValue })
+        for (const [peerId, peerPublicKey] of recipients) {
+            const envelope = await encryptMessage(text, peerPublicKey)
+            const addressed: AddressedEnvelope = { ...envelope, recipient: peerId }
+            this.client.send({ type: 'message', body: addressed as unknown as JsonValue })
+        }
         this.callbacks.onMessage({ id: crypto.randomUUID(), sender: 'me', text, timestamp: Date.now() })
     }
 
@@ -94,39 +112,42 @@ export class ChatSession {
     private async handleFrame(frame: ReceiveFrame): Promise<void> {
         switch (frame.type) {
             case 'participant-joined':
-                this.callbacks.onPeerOnlineChange(true)
-                // Re-announce: we may have sent our key before anyone was here to receive it.
+                this.onlinePeerIds.add(frame.userId)
+                this.callbacks.onPeersChange([...this.onlinePeerIds])
+                // Re-announce: the newcomer (and anyone else) may not have our key yet.
                 this.announcePublicKey()
                 return
             case 'participant-left':
-                this.callbacks.onPeerOnlineChange(false)
-                this.peerPublicKey = undefined
-                this.callbacks.onKeysExchangedChange(false)
+                this.onlinePeerIds.delete(frame.userId)
+                this.peerPublicKeys.delete(frame.userId)
+                this.callbacks.onPeersChange([...this.onlinePeerIds])
+                this.callbacks.onKeysExchangedChange(this.peerPublicKeys.size > 0)
                 return
             case 'error':
                 console.error(`Server error [${frame.code}]: ${frame.message}`)
                 return
             case 'message':
-                await this.handleMessageBody(frame.body)
+                await this.handleMessageBody(frame.sender, frame.body)
                 return
         }
     }
 
-    private async handleMessageBody(body: unknown): Promise<void> {
+    private async handleMessageBody(senderId: string, body: unknown): Promise<void> {
         if (!body || typeof body !== 'object' || !('kind' in body)) return
 
         if ((body as { kind: unknown }).kind === 'public-key') {
             const announcement = body as unknown as KeyAnnouncement
-            this.peerPublicKey = await importPublicKey(announcement.spki)
+            this.peerPublicKeys.set(senderId, await importPublicKey(announcement.spki))
             this.callbacks.onKeysExchangedChange(true)
             return
         }
 
         if ((body as { kind: unknown }).kind === 'chat') {
             if (!this.privateKey) return
-            const envelope = body as unknown as ChatEnvelope
+            const envelope = body as unknown as AddressedEnvelope
+            if (envelope.recipient !== this.userId) return // addressed to a different peer in this room
             const text = await decryptMessage(envelope, this.privateKey)
-            this.callbacks.onMessage({ id: crypto.randomUUID(), sender: 'peer', text, timestamp: Date.now() })
+            this.callbacks.onMessage({ id: crypto.randomUUID(), sender: senderId, text, timestamp: Date.now() })
         }
     }
 }

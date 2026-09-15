@@ -10,7 +10,7 @@ interface ChatProps {
 
 function Chat({ chatId, onLeave }: ChatProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([])
-    const [peerOnline, setPeerOnline] = useState(false)
+    const [peerIds, setPeerIds] = useState<string[]>([])
     const [keysExchanged, setKeysExchanged] = useState(false)
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
     const [draft, setDraft] = useState('')
@@ -21,7 +21,7 @@ function Chat({ chatId, onLeave }: ChatProps) {
     useEffect(() => {
         const session = new ChatSession(chatId, userIdRef.current, {
             onMessage: (message) => setMessages((prev) => [...prev, message]),
-            onPeerOnlineChange: setPeerOnline,
+            onPeersChange: setPeerIds,
             onKeysExchangedChange: setKeysExchanged,
             onConnectionStatusChange: setConnectionStatus,
         })
@@ -61,8 +61,10 @@ function Chat({ chatId, onLeave }: ChatProps) {
         <div className="screen chat-screen">
             <header className="chat-header">
                 <div className="peer-status">
-                    <span className={`status-dot ${peerOnline ? 'online' : 'offline'}`} />
-                    {peerOnline ? 'Peer online' : 'Waiting for peer…'}
+                    <span className={`status-dot ${peerIds.length > 0 ? 'online' : 'offline'}`} />
+                    {peerIds.length > 0
+                        ? `${peerIds.length} peer${peerIds.length > 1 ? 's' : ''} online`
+                        : 'Waiting for peers…'}
                 </div>
                 <div className={`keys-indicator ${keysExchanged ? 'exchanged' : ''}`}>
                     {keysExchanged ? 'Keys exchanged' : 'Exchanging keys…'}
@@ -75,7 +77,10 @@ function Chat({ chatId, onLeave }: ChatProps) {
 
             <div className="message-list">
                 {messages.map((m) => (
-                    <div key={m.id} className={`message ${m.sender}`}>
+                    <div key={m.id} className={`message ${m.sender === 'me' ? 'me' : 'peer'}`}>
+                        {m.sender !== 'me' && peerIds.length > 1 && (
+                            <span className="message-sender">{m.sender.slice(0, 8)}</span>
+                        )}
                         <span className="message-text">{m.text}</span>
                     </div>
                 ))}

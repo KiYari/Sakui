@@ -42,3 +42,9 @@ npm run build              # type-checks and builds to web/dist
 ```bash
 ./gradlew build            # server build + test
 ```
+
+## Credits
+
+This project reimplements the protocol and design of
+[muke1908/chat-e2ee](https://github.com/muke1908/chat-e2ee) — see
+[`SPEC.md`](./SPEC.md) for the reverse-engineered spec this codebase follows.

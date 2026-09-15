@@ -7,7 +7,7 @@ plugins {
 val ktorVersion = "3.5.2"
 
 application {
-    mainClass.set("com.eeck.server.ApplicationKt")
+    mainClass.set("com.eeck.server.app.ApplicationKt")
 }
 
 dependencies {
@@ -19,6 +19,7 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+    implementation("io.ktor:ktor-server-rate-limit:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:1.6.3")
 
     testImplementation(kotlin("test"))

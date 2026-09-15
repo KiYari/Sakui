@@ -38,7 +38,7 @@ const INITIAL_BACKOFF_MS = 500
 const MAX_BACKOFF_MS = 10_000
 
 /** The server's own terminal rejection close codes (see ChatCloseReasons.kt) — never auto-reconnect after these. */
-const TERMINAL_CLOSE_CODES = new Set([4000, 4001])
+const TERMINAL_CLOSE_CODES = new Set([4000])
 
 export class E2eeClient {
     private socket: WebSocket | undefined
