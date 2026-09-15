@@ -1,5 +1,9 @@
 package com.eeck.server
 
+import com.eeck.server.chat.ChatService
+import com.eeck.server.chat.chatLinkRoutes
+import com.eeck.server.common.ErrorResponse
+import com.eeck.server.session.InMemorySessionStore
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -42,17 +46,17 @@ fun Application.module() {
     }
     install(WebSockets)
 
+    val chatService = ChatService(InMemorySessionStore())
+
     routing {
         route("/api") {
             get("/health") {
                 call.respond(HealthResponse(status = "ok"))
             }
+            chatLinkRoutes(chatService)
         }
     }
 }
 
 @Serializable
 data class HealthResponse(val status: String)
-
-@Serializable
-data class ErrorResponse(val error: String)
