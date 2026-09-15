@@ -1,6 +1,7 @@
-package com.eeck.server.features.session
+package com.eeck.server.features.session.store
 
 import com.eeck.server.core.ids.ChatId
+import com.eeck.server.features.session.model.SessionRecord
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap

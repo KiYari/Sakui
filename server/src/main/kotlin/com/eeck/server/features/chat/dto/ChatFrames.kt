@@ -1,4 +1,4 @@
-package com.eeck.server.features.chat
+package com.eeck.server.features.chat.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -6,7 +6,8 @@ import kotlinx.serialization.json.JsonElement
 
 /**
  * Client -> server frames. `body` is opaque application payload — the server
- * never parses, validates, or logs it, only relays it (see [ChatWebSocketRoute]).
+ * never parses, validates, or logs it, only relays it (see the `resource` and
+ * `service` layers).
  *
  * Wire fields stay raw `String` (not [com.eeck.server.core.ids.UserId]/[com.eeck.server.core.ids.ChatId]) —
  * the value classes are an internal domain safety net, not a wire-format concern.

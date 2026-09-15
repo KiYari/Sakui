@@ -1,4 +1,4 @@
-package com.eeck.server.features.session
+package com.eeck.server.features.session.store
 
 import java.time.Duration
 

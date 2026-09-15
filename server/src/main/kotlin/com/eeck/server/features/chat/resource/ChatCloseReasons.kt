@@ -1,4 +1,4 @@
-package com.eeck.server.features.chat
+package com.eeck.server.features.chat.resource
 
 import io.ktor.websocket.CloseReason
 

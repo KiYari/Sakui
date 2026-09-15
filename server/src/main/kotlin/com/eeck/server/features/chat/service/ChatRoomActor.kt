@@ -1,6 +1,11 @@
-package com.eeck.server.features.chat
+package com.eeck.server.features.chat.service
 
 import com.eeck.server.core.ids.ChatId
+import com.eeck.server.features.chat.dto.MessageOut
+import com.eeck.server.features.chat.dto.OutboundFrame
+import com.eeck.server.features.chat.dto.ParticipantJoined
+import com.eeck.server.features.chat.dto.ParticipantLeft
+import com.eeck.server.features.chat.model.Participant
 import io.ktor.server.websocket.sendSerialized
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope

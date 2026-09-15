@@ -1,10 +1,16 @@
-package com.eeck.server.features.session
+package com.eeck.server.features.session.resource
 
 import com.eeck.server.core.errors.DomainError
 import com.eeck.server.core.errors.ErrorResponse
 import com.eeck.server.core.errors.Outcome
 import com.eeck.server.core.errors.httpStatus
 import com.eeck.server.core.ids.ChatId
+import com.eeck.server.features.session.dto.DeleteResponse
+import com.eeck.server.features.session.dto.LinkResponse
+import com.eeck.server.features.session.dto.StatusErrorResponse
+import com.eeck.server.features.session.dto.StatusResponse
+import com.eeck.server.features.session.model.SessionIdGenerator
+import com.eeck.server.features.session.service.SessionService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.plugins.ratelimit.RateLimitName

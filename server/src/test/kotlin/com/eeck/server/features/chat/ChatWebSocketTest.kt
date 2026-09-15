@@ -1,6 +1,16 @@
 package com.eeck.server.features.chat
 
 import com.eeck.server.core.ids.ChatId
+import com.eeck.server.features.chat.dto.ErrorFrame
+import com.eeck.server.features.chat.dto.InboundFrame
+import com.eeck.server.features.chat.dto.MessageIn
+import com.eeck.server.features.chat.dto.MessageOut
+import com.eeck.server.features.chat.dto.OutboundFrame
+import com.eeck.server.features.chat.dto.ParticipantLeft
+import com.eeck.server.features.chat.port.SessionLookup
+import com.eeck.server.features.chat.resource.ChatCloseReasons
+import com.eeck.server.features.chat.resource.chatWebSocket
+import com.eeck.server.features.chat.service.ChatRoomRegistry
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.webSocket

@@ -3,6 +3,13 @@ package com.eeck.server.features.chat
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
+import com.eeck.server.features.chat.dto.InboundFrame
+import com.eeck.server.features.chat.dto.MessageIn
+import com.eeck.server.features.chat.dto.MessageOut
+import com.eeck.server.features.chat.dto.OutboundFrame
+import com.eeck.server.features.chat.port.SessionLookup
+import com.eeck.server.features.chat.resource.chatWebSocket
+import com.eeck.server.features.chat.service.ChatRoomRegistry
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.webSocket

@@ -1,9 +1,9 @@
 package com.eeck.server.app
 
 import com.eeck.server.core.errors.ErrorResponse
-import com.eeck.server.features.chat.chatWebSocket
-import com.eeck.server.features.session.CREATE_LINK_RATE_LIMIT
-import com.eeck.server.features.session.sessionRoutes
+import com.eeck.server.features.chat.resource.chatWebSocket
+import com.eeck.server.features.session.resource.CREATE_LINK_RATE_LIMIT
+import com.eeck.server.features.session.resource.sessionRoutes
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter

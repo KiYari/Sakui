@@ -1,14 +1,17 @@
-package com.eeck.server.features.session
+package com.eeck.server.features.session.service
 
 import com.eeck.server.core.errors.DomainError
 import com.eeck.server.core.errors.Outcome
 import com.eeck.server.core.ids.ChatId
-import com.eeck.server.features.chat.SessionLookup
+import com.eeck.server.features.chat.port.SessionLookup
+import com.eeck.server.features.session.model.SessionIdGenerator
+import com.eeck.server.features.session.model.SessionRecord
+import com.eeck.server.features.session.store.SessionStore
 
 /**
- * Business logic for chat-link lifecycle. Routes never talk to [SessionStore]
- * directly — this is the only layer that decides what a session's state
- * means.
+ * Business logic for chat-link lifecycle. The resource layer never talks to
+ * [SessionStore] directly — this is the only layer that decides what a
+ * session's state means.
  *
  * Also implements [SessionLookup] — the one interface `features/chat` declares
  * and `features/session` provides, so the realtime feature can check a chatId

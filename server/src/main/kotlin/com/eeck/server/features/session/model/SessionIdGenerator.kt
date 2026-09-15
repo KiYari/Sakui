@@ -1,4 +1,4 @@
-package com.eeck.server.features.session
+package com.eeck.server.features.session.model
 
 import com.eeck.server.core.ids.ChatId
 import java.security.SecureRandom
@@ -12,6 +12,10 @@ import java.util.Base64
  * 18 random bytes, base64url-encoded (RFC 4648 §5, unpadded): 18 is a multiple
  * of 3, so the encoding is exactly 24 characters with no padding, giving a
  * clean fixed-length format to validate against.
+ *
+ * Lives in `model` rather than `service` because both the service (generating)
+ * and the resource layer (validating untrusted input before it becomes a
+ * [ChatId]) depend on it.
  */
 object SessionIdGenerator {
     private const val ID_BYTES = 18

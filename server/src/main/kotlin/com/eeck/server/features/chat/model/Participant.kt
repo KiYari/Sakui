@@ -1,4 +1,4 @@
-package com.eeck.server.features.chat
+package com.eeck.server.features.chat.model
 
 import com.eeck.server.core.ids.UserId
 import io.ktor.server.websocket.DefaultWebSocketServerSession

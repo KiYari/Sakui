@@ -1,8 +1,15 @@
-package com.eeck.server.features.chat
+package com.eeck.server.features.chat.resource
 
 import com.eeck.server.core.ids.ChatId
 import com.eeck.server.core.ids.UserId
 import com.eeck.server.core.ws.DEFAULT_MAX_FRAME_SIZE
+import com.eeck.server.features.chat.dto.ErrorFrame
+import com.eeck.server.features.chat.dto.InboundFrame
+import com.eeck.server.features.chat.dto.MessageIn
+import com.eeck.server.features.chat.dto.OutboundFrame
+import com.eeck.server.features.chat.model.Participant
+import com.eeck.server.features.chat.port.SessionLookup
+import com.eeck.server.features.chat.service.ChatRoomRegistry
 import io.ktor.server.routing.Route
 import io.ktor.server.websocket.receiveDeserialized
 import io.ktor.server.websocket.sendSerialized

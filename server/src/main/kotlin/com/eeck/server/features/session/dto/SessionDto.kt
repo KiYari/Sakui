@@ -1,4 +1,4 @@
-package com.eeck.server.features.session
+package com.eeck.server.features.session.dto
 
 import kotlinx.serialization.Serializable
 

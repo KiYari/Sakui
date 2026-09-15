@@ -1,6 +1,7 @@
-package com.eeck.server.features.chat
+package com.eeck.server.features.chat.service
 
 import com.eeck.server.core.ids.ChatId
+import com.eeck.server.features.chat.model.Participant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
