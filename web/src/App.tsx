@@ -1,23 +1,38 @@
 import { useEffect, useState } from 'react'
+import CreateLink from './screens/CreateLink'
+import Chat from './screens/Chat'
 
-type HealthResponse = { status: string }
+function getChatIdFromUrl(): string | null {
+    return new URLSearchParams(window.location.search).get('chatId')
+}
 
 function App() {
-  const [health, setHealth] = useState<string>('checking...')
+    const [chatId, setChatId] = useState<string | null>(() => getChatIdFromUrl())
 
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json() as Promise<HealthResponse>)
-      .then((data) => setHealth(data.status))
-      .catch(() => setHealth('unreachable'))
-  }, [])
+    useEffect(() => {
+        const onPopState = () => setChatId(getChatIdFromUrl())
+        window.addEventListener('popstate', onPopState)
+        return () => window.removeEventListener('popstate', onPopState)
+    }, [])
 
-  return (
-    <div>
-      <h1>eeck</h1>
-      <p>API health: {health}</p>
-    </div>
-  )
+    const enterChat = (id: string) => {
+        const url = new URL(window.location.href)
+        url.searchParams.set('chatId', id)
+        window.history.pushState({}, '', url)
+        setChatId(id)
+    }
+
+    const leaveChat = () => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('chatId')
+        window.history.pushState({}, '', url)
+        setChatId(null)
+    }
+
+    if (chatId) {
+        return <Chat chatId={chatId} onLeave={leaveChat} />
+    }
+    return <CreateLink onCreated={enterChat} />
 }
 
 export default App
