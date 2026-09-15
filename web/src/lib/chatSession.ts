@@ -34,6 +34,14 @@ export class ChatSession {
     private privateKey: CryptoKey | undefined
     private myPublicKeySpki: string | undefined
     private peerPublicKey: CryptoKey | undefined
+    /**
+     * Guards against a dispose() that lands while start() is still awaiting
+     * (e.g. React StrictMode's dev-only mount -> cleanup -> remount, which
+     * runs cleanup before the async keypair lookup below has resolved).
+     * Without this, a "disposed" session would resume after the await and
+     * open a real WebSocket anyway, leaving stray/duplicate connections.
+     */
+    private disposed = false
 
     constructor(
         private readonly chatId: string,
@@ -43,8 +51,10 @@ export class ChatSession {
 
     async start(): Promise<void> {
         const pair = await getOrCreateKeyPair(this.chatId)
+        if (this.disposed) return
         this.privateKey = pair.privateKey
         this.myPublicKeySpki = await exportPublicKey(pair.publicKey)
+        if (this.disposed) return
 
         this.client.onMessage((frame) => {
             this.handleFrame(frame).catch((error) => {
@@ -71,6 +81,7 @@ export class ChatSession {
     }
 
     dispose(): void {
+        this.disposed = true
         this.client.disconnect()
     }
 
