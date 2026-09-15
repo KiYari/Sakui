@@ -11,6 +11,12 @@ out/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
+### Node ###
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
 ### Eclipse ###
 .apt_generated
 .classpath
