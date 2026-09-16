@@ -46,3 +46,4 @@ bin/
 .github
 .vscode
 reference
+graphify-out/
