@@ -1,0 +1,38 @@
+# Optional HTTPS overlay. Use together with the base file:
+#
+#   EECK_DOMAIN=chat.example.com \
+#   EECK_HTTP_PORT=127.0.0.1:8080 \
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
+#
+# Requirements: a DNS A/AAAA record for EECK_DOMAIN pointing at this host, and
+# ports 80 + 443 reachable (Let's Encrypt validates over :80).
+#
+# Setting EECK_HTTP_PORT to a loopback-bound port keeps nginx off the public
+# interface so Caddy is the only way in. That works because the base file spells
+# the mapping as "${EECK_HTTP_PORT:-80}:80" — a host:port value expands in place.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      # Fails the command immediately, with this message, instead of starting a
+      # Caddy that would try to get a certificate for the literal empty string.
+      EECK_DOMAIN: "${EECK_DOMAIN:?set EECK_DOMAIN to the public hostname, e.g. chat.example.com}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live in a named volume; losing it means re-issuing on every
+      # redeploy and hitting Let's Encrypt rate limits.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

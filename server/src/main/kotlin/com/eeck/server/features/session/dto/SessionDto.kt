@@ -2,9 +2,9 @@ package com.eeck.server.features.session.dto
 
 import kotlinx.serialization.Serializable
 
-/** Field names verbatim from SPEC.md §1's `LinkType`/`ServerLinkResponse` shape. */
+/** Field names from SPEC.md §1 (`LinkType`), plus `ownerToken`: shown only here, required to delete the link. */
 @Serializable
-data class LinkResponse(val hash: String, val expired: Boolean, val deleted: Boolean)
+data class LinkResponse(val hash: String, val expired: Boolean, val deleted: Boolean, val ownerToken: String)
 
 /** Success shape for `GET /api/chat-link/status/{channel}`, per SPEC.md §1. */
 @Serializable

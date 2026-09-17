@@ -1,0 +1,20 @@
+export {
+    answerChallenge,
+    base64ToBytes,
+    bytesToBase64,
+    decryptBytes,
+    decryptMessage,
+    encryptBytes,
+    encryptMessage,
+    exportPublicKey,
+    fingerprint,
+    generateContentKey,
+    generateKeyPair,
+    importPublicKey,
+    unwrapContentKey,
+    wrapContentKey,
+    type ChatEnvelope,
+    type ChatKeyPair,
+    type EncryptedBytes,
+} from './webCrypto'
+export { webCryptoProvider, type CryptoProvider } from './provider'

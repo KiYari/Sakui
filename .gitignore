@@ -47,3 +47,7 @@ bin/
 .vscode
 reference
 graphify-out/
+
+### Local deployment config (.env.example is the committed template) ###
+.env
+!.env.example

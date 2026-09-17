@@ -11,6 +11,7 @@ import com.eeck.server.features.session.dto.StatusErrorResponse
 import com.eeck.server.features.session.dto.StatusResponse
 import com.eeck.server.features.session.model.SessionIdGenerator
 import com.eeck.server.features.session.service.SessionService
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.plugins.ratelimit.RateLimitName
@@ -25,9 +26,13 @@ import io.ktor.server.routing.route
 /** Shared with the [io.ktor.server.plugins.ratelimit.RateLimit] registration in `app/AppModule`. */
 val CREATE_LINK_RATE_LIMIT = RateLimitName("create-link")
 
+private const val BEARER_PREFIX = "Bearer "
+
 /**
  * `POST /api/chat-link`, `GET /api/chat-link/status/{channel}`,
  * `DELETE /api/chat-link/{channel}` — see SPEC.md §1.
+ *
+ * Deleting requires `Authorization: Bearer <ownerToken>` from the create response.
  *
  * Routes only parse/validate input shape and map [SessionService]'s results to
  * HTTP status/bodies; all session-state logic lives in [SessionService].
@@ -36,10 +41,15 @@ fun Route.sessionRoutes(service: SessionService) {
     route("/chat-link") {
         rateLimit(CREATE_LINK_RATE_LIMIT) {
             post {
-                val session = service.createLink()
+                val created = service.createLink()
                 call.respond(
                     HttpStatusCode.OK,
-                    LinkResponse(hash = session.id.value, expired = false, deleted = session.deleted),
+                    LinkResponse(
+                        hash = created.record.id.value,
+                        expired = false,
+                        deleted = created.record.deleted,
+                        ownerToken = created.ownerToken,
+                    ),
                 )
             }
         }
@@ -67,9 +77,16 @@ fun Route.sessionRoutes(service: SessionService) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed chat id."))
                 return@delete
             }
-            when (val outcome = service.delete(ChatId(channel))) {
+            val token = call.request.headers[HttpHeaders.Authorization]
+                ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = true) }
+                ?.substring(BEARER_PREFIX.length)
+                ?.trim()
+            when (val outcome = service.delete(ChatId(channel), token)) {
                 is Outcome.Success -> call.respond(HttpStatusCode.OK, DeleteResponse(status = "ok"))
-                is Outcome.Failure -> call.respond(outcome.error.httpStatus, ErrorResponse("Not found"))
+                is Outcome.Failure -> {
+                    val message = if (outcome.error == DomainError.NotLinkOwner) "Only the link's creator can delete it." else "Not found"
+                    call.respond(outcome.error.httpStatus, ErrorResponse(message))
+                }
             }
         }
     }

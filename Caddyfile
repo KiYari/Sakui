@@ -1,0 +1,11 @@
+# Used only by docker-compose.tls.yml. Caddy terminates TLS (fetching and
+# renewing a Let's Encrypt certificate automatically) and forwards everything to
+# the nginx container, which keeps serving the SPA and proxying /api and /ws.
+#
+# reverse_proxy passes WebSocket upgrades through unchanged, so /ws needs no
+# special handling here.
+
+{$EECK_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}

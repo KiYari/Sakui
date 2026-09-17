@@ -7,17 +7,20 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "steiger ./src"
   },
   "dependencies": {
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@feature-sliced/steiger-plugin": "^0.7.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "fake-indexeddb": "6.2.5",
+    "steiger": "^0.6.0",
     "typescript": "7.0.2",
     "vite": "8.3.0",
     "vitest": "5.0.1"

@@ -6,6 +6,7 @@ import io.ktor.http.HttpStatusCode
 sealed interface DomainError {
     data object SessionNotFound : DomainError
     data object LinkAlreadyDeleted : DomainError
+    data object NotLinkOwner : DomainError
 }
 
 /** The one place that decides which HTTP status a domain error becomes. */
@@ -13,4 +14,5 @@ val DomainError.httpStatus: HttpStatusCode
     get() = when (this) {
         DomainError.SessionNotFound -> HttpStatusCode.NotFound
         DomainError.LinkAlreadyDeleted -> HttpStatusCode.Gone
+        DomainError.NotLinkOwner -> HttpStatusCode.Forbidden
     }

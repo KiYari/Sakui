@@ -1,0 +1,12 @@
+# node_modules is reinstalled inside the image: a host copy would carry
+# Windows-native binaries that cannot run on Linux.
+node_modules
+dist
+.vite
+*.tsbuildinfo
+
+.git
+.idea
+.vscode
+Dockerfile
+.dockerignore

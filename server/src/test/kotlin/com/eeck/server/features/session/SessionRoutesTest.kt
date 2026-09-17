@@ -3,16 +3,21 @@ package com.eeck.server.features.session
 import com.eeck.server.features.session.dto.DeleteResponse
 import com.eeck.server.features.session.dto.LinkResponse
 import com.eeck.server.features.session.dto.StatusErrorResponse
+import com.eeck.server.core.ids.ChatId
 import com.eeck.server.features.session.dto.StatusResponse
+import com.eeck.server.features.session.model.OwnerToken
 import com.eeck.server.features.session.model.SessionIdGenerator
 import com.eeck.server.features.session.resource.CREATE_LINK_RATE_LIMIT
 import com.eeck.server.features.session.resource.sessionRoutes
 import com.eeck.server.features.session.service.SessionService
 import com.eeck.server.features.session.store.InMemorySessionStore
 import com.eeck.server.features.session.store.SessionStoreConfig
+import io.ktor.client.HttpClient
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -44,20 +49,26 @@ private class AdjustableClock(
     override fun instant(): Instant = instant
 }
 
-private fun Application.testSessionModule(store: InMemorySessionStore) {
+private fun Application.testSessionModule(
+    store: InMemorySessionStore,
+    onLinkDeleted: (ChatId) -> Unit = {},
+) {
     install(ContentNegotiation) { json() }
     install(RateLimit) {
         register(CREATE_LINK_RATE_LIMIT) {
             rateLimiter(limit = 10, refillPeriod = 1.minutes)
         }
     }
-    val service = SessionService(store)
+    val service = SessionService(store, onLinkDeleted)
     routing {
         route("/api") {
             sessionRoutes(service)
         }
     }
 }
+
+private suspend fun HttpClient.deleteAsOwner(link: LinkResponse): HttpResponse =
+    delete("/api/chat-link/${link.hash}") { bearerAuth(link.ownerToken) }
 
 class SessionRoutesTest {
 
@@ -128,7 +139,7 @@ class SessionRoutesTest {
         application(defaultModule())
 
         val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
-        client.delete("/api/chat-link/${link.hash}")
+        client.deleteAsOwner(link)
 
         val response = client.get("/api/chat-link/status/${link.hash}")
 
@@ -143,11 +154,66 @@ class SessionRoutesTest {
         application(defaultModule())
 
         val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
-        val response = client.delete("/api/chat-link/${link.hash}")
+        val response = client.deleteAsOwner(link)
 
         assertEquals(HttpStatusCode.OK, response.status)
         val body = json.decodeFromString<DeleteResponse>(response.bodyAsText())
         assertEquals("ok", body.status)
+    }
+
+    @Test
+    fun `the owner token is returned on create but only its hash is stored`() = testApplication {
+        val store = InMemorySessionStore()
+        application { testSessionModule(store) }
+
+        val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
+
+        val record = store.find(ChatId(link.hash))!!
+        assertTrue(link.ownerToken.length >= 43, "owner token should carry at least 256 bits")
+        assertTrue(record.ownerTokenHash != link.ownerToken)
+        assertTrue(OwnerToken.matches(link.ownerToken, record.ownerTokenHash))
+    }
+
+    @Test
+    fun `delete without the owner token is 403 and leaves the link active`() = testApplication {
+        application(defaultModule())
+
+        val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
+        val response = client.delete("/api/chat-link/${link.hash}")
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+        assertEquals(HttpStatusCode.OK, client.get("/api/chat-link/status/${link.hash}").status)
+    }
+
+    @Test
+    fun `delete with a wrong token - including another link's valid token - is 403`() = testApplication {
+        application(defaultModule())
+
+        val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
+        val other = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
+
+        val guessed = client.delete("/api/chat-link/${link.hash}") { bearerAuth(OwnerToken.generate()) }
+        val crossLink = client.delete("/api/chat-link/${link.hash}") { bearerAuth(other.ownerToken) }
+        val chatIdAsToken = client.delete("/api/chat-link/${link.hash}") { bearerAuth(link.hash) }
+
+        assertEquals(HttpStatusCode.Forbidden, guessed.status)
+        assertEquals(HttpStatusCode.Forbidden, crossLink.status)
+        assertEquals(HttpStatusCode.Forbidden, chatIdAsToken.status)
+        assertEquals(HttpStatusCode.OK, client.get("/api/chat-link/status/${link.hash}").status)
+    }
+
+    @Test
+    fun `a successful delete notifies the listener exactly once, a refused one never`() = testApplication {
+        val deleted = mutableListOf<ChatId>()
+        application { testSessionModule(InMemorySessionStore()) { deleted += it } }
+
+        val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
+        client.delete("/api/chat-link/${link.hash}")
+        assertTrue(deleted.isEmpty())
+
+        client.deleteAsOwner(link)
+        client.deleteAsOwner(link)
+        assertEquals(listOf(ChatId(link.hash)), deleted)
     }
 
     @Test
@@ -164,9 +230,9 @@ class SessionRoutesTest {
         application(defaultModule())
 
         val link = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
-        client.delete("/api/chat-link/${link.hash}")
+        client.deleteAsOwner(link)
 
-        val response = client.delete("/api/chat-link/${link.hash}")
+        val response = client.deleteAsOwner(link)
 
         assertEquals(HttpStatusCode.NotFound, response.status)
     }
@@ -178,6 +244,22 @@ class SessionRoutesTest {
         val response = client.delete("/api/chat-link/nope")
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `expired links that are never read again are still swept out of memory`() = testApplication {
+        val clock = AdjustableClock(Instant.parse("2024-01-01T00:00:00Z"))
+        val store = InMemorySessionStore(SessionStoreConfig(ttl = Duration.ofHours(24)), clock)
+        application { testSessionModule(store) }
+
+        repeat(5) { client.post("/api/chat-link") }
+        assertEquals(5, store.storedCount())
+
+        clock.instant = clock.instant.plus(Duration.ofHours(25))
+        val fresh = json.decodeFromString<LinkResponse>(client.post("/api/chat-link").bodyAsText())
+
+        assertEquals(1, store.storedCount())
+        assertEquals(HttpStatusCode.OK, client.get("/api/chat-link/status/${fresh.hash}").status)
     }
 
     @Test

@@ -1,0 +1,1 @@
+export { getTabScope } from './tabScope'
