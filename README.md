@@ -145,16 +145,26 @@ build-release.bat            :: Windows
 ./build-release.sh           # Linux
 ```
 
-Result: `release/eeck/`, with `run.bat` / `run.sh` inside it — copy that
-folder anywhere (another machine, no build tools needed there) and run it.
-It needs a Java 21 runtime on the target machine (a JRE is enough) — the
-build prints where to get one (Temurin) as a reminder when it finishes.
+`build-release.bat` produces **both** `release/eeck-windows/` and
+`release/eeck-linux/` from one command: the server and web client only need
+building once, only the OS-specific bits (Caddy binary, launch script) differ
+per folder, and it uses WSL — if installed (`wsl --install`) — to set the
+Linux folder's executable bits correctly, since plain Windows tools don't
+reliably do that on NTFS. Without WSL it still produces the Windows folder,
+with a note about what it skipped. `build-release.sh`, run on Linux, produces
+only `release/eeck-linux/`.
+
+Either folder is self-contained — copy it anywhere (another machine, no
+build tools needed there) and run it. Each needs a Java 21 runtime on the
+target machine (a JRE is enough); the Windows build prints where to get one
+(Temurin) as a reminder when it finishes, and the Linux one prints the
+`apt`/`dnf` package name.
 
 ```bat
-release\eeck\run.bat                 :: plain HTTP, port 3001
+release\eeck-windows\run.bat         :: plain HTTP, port 3001
 ```
 ```bash
-release/eeck/run.sh                  # plain HTTP, port 3001
+release/eeck-linux/run.sh            # plain HTTP, port 3001
 ```
 
 Fine for local use or an internal network. **Not for the open internet** —
@@ -163,15 +173,15 @@ see the HTTPS warning above; the same reasoning applies here.
 ### HTTPS, without Docker
 
 The build also bundles [Caddy](https://caddyserver.com) (if `curl`/`tar` are
-available — both ship with Windows and every mainstream Linux distro) so the
+available — both ship with Windows and every mainstream Linux distro) so each
 release can front itself with the same automatic-HTTPS setup as
 `docker-compose.tls.yml`, just without Docker:
 
 ```bat
-release\eeck\run-https.bat chat.example.com
+release\eeck-windows\run-https.bat chat.example.com
 ```
 ```bash
-release/eeck/run-https.sh chat.example.com
+release/eeck-linux/run-https.sh chat.example.com
 ```
 
 This binds the app to `127.0.0.1` only and puts Caddy in front of it on
@@ -186,11 +196,11 @@ domain automatically. Needs, before running:
 - permission to bind those ports: run as Administrator on Windows; on Linux,
   either run as root or grant the binary the capability once so nothing
   needs to run as root at all — `sudo setcap 'cap_net_bind_service=+ep'
-  release/eeck/caddy` (`run-https.sh` prints this if it fails without it).
+  release/eeck-linux/caddy` (`run-https.sh` prints this if it fails without it).
 
 For a real server, don't run these by hand in a terminal — install them as
 systemd services instead, so they survive logout and restart on crash or
-reboot. `release/eeck/eeck.service.template` and
+reboot. `release/eeck-linux/eeck.service.template` and
 `eeck-caddy.service.template` (Linux only; both copied into the release
 folder) have the exact steps in their header comments.
 

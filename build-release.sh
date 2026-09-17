@@ -5,11 +5,13 @@
 # See scripts/run-template.sh for what run.sh (generated below) actually does,
 # and scripts/eeck.service.template for running it under systemd.
 #
-# Result: release/eeck/run.sh -- run it to start the app on :3001 (or
-# ./release/eeck/run.sh 8080 for another port).
+# Result: release/eeck-linux/run.sh -- run it to start the app on :3001 (or
+# ./release/eeck-linux/run.sh 8080 for another port). Same output path
+# build-release.bat's own Linux release (built via WSL) uses, so either one
+# produces something at this location.
 #
 # Usage:
-#   ./build-release.sh              # build here, then copy release/eeck to the server
+#   ./build-release.sh              # build here, then copy release/eeck-linux to the server
 #   ./build-release.sh --on-server   # same, but skipped if already built - just
 #                                    # documents that this can run directly on the
 #                                    # target machine too, given a JDK and Node there
@@ -27,8 +29,8 @@ echo "=== Building web client (npm ci && npm run build) ==="
 (cd web && npm ci && npm run build)
 
 echo
-echo "=== Assembling release/eeck ==="
-RELEASE_DIR="release/eeck"
+echo "=== Assembling release/eeck-linux ==="
+RELEASE_DIR="release/eeck-linux"
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
