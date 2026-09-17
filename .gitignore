@@ -51,3 +51,5 @@ graphify-out/
 ### Local deployment config (.env.example is the committed template) ###
 .env
 !.env.example
+### Release build output (build-release.bat) ###
+/release/

@@ -1,7 +1,9 @@
 package com.eeck.server.app
 
 import com.eeck.server.core.errors.ErrorResponse
+import com.eeck.server.core.http.SecurityHeaders
 import com.eeck.server.core.http.redactOpaqueTokens
+import com.eeck.server.core.http.spaStaticFiles
 import com.eeck.server.features.chat.resource.chatWebSocket
 import com.eeck.server.features.session.resource.CREATE_LINK_RATE_LIMIT
 import com.eeck.server.features.session.resource.sessionRoutes
@@ -13,6 +15,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.application.install
+import io.ktor.server.application.log
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.calllogging.CallLogging
@@ -31,14 +34,16 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
 import kotlin.time.Duration.Companion.minutes
 
 fun main() {
     val appModule = AppModule()
-    embeddedServer(Netty, port = appModule.config.port) { module(appModule) }.start(wait = true)
+    embeddedServer(Netty, port = appModule.config.port, host = appModule.config.host) { module(appModule) }.start(wait = true)
 }
 
 fun Application.module(app: AppModule = AppModule()) {
+    install(SecurityHeaders)
     install(ContentNegotiation) {
         json()
     }
@@ -89,6 +94,8 @@ fun Application.module(app: AppModule = AppModule()) {
         }
     }
 
+    val webDistDir = File(app.config.webDistPath)
+    var servingWebClient = false
     routing {
         route("/api") {
             get("/health") {
@@ -97,6 +104,12 @@ fun Application.module(app: AppModule = AppModule()) {
             sessionRoutes(app.sessionService)
         }
         chatWebSocket(app.chatRoomRegistry, app.sessionService, connectionLimiter = app.chatConnectionLimiter)
+        servingWebClient = spaStaticFiles(webDistDir)
+    }
+    if (servingWebClient) {
+        log.info("Serving the web client from ${webDistDir.absolutePath}")
+    } else {
+        log.info("No web client at '${webDistDir.path}' — serving /api and /ws only.")
     }
 }
 

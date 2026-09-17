@@ -1,0 +1,24 @@
+# Used by run-https.bat / run-https.sh (the no-Docker release). Caddy
+# terminates TLS - fetching and renewing a Let's Encrypt certificate
+# automatically - and reverse-proxies everything to the eeck server, which
+# run-https binds to 127.0.0.1 only so it is never reachable except through
+# this proxy. Same idea as this repo's own Caddyfile (used by
+# docker-compose.tls.yml), just pointed at a local port instead of a
+# container name.
+#
+# `storage` is set explicitly to a folder next to this file rather than
+# Caddy's own default (under the running user's home directory): the
+# systemd unit (eeck-caddy.service.template) locks that directory away with
+# ProtectHome, and a relative path here resolves the same way whether this
+# runs from systemd (WorkingDirectory=/opt/eeck) or by hand from wherever
+# the release folder was unpacked.
+{
+	storage file_system {
+		root ./caddy-data
+	}
+}
+
+{$EECK_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:{$EECK_PORT}
+}

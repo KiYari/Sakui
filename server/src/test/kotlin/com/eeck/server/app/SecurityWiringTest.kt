@@ -12,6 +12,7 @@ import com.eeck.server.features.chat.expect
 import com.eeck.server.features.chat.open
 import com.eeck.server.features.chat.wsClient
 import com.eeck.server.features.session.dto.LinkResponse
+import com.eeck.server.features.session.model.SessionIdGenerator
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -46,6 +47,22 @@ class SecurityWiringTest {
             HttpStatusCode.OK,
             client.post("/api/chat-link") { header("X-Forwarded-For", "203.0.113.2") }.status,
             "one noisy client must not lock everyone else out",
+        )
+    }
+
+    @Test
+    fun `status and delete share the same per-client budget as create, not an unmetered one`() = testApplication {
+        application { module(AppModule(ServerConfig(trustProxy = true))) }
+        val header = "203.0.113.5"
+
+        // Spend the whole budget on GET and DELETE alone — if either endpoint were
+        // exempt, this would leave room for a POST that must instead be refused.
+        repeat(5) { client.get("/api/chat-link/status/${SessionIdGenerator.generate().value}") { header("X-Forwarded-For", header) } }
+        repeat(5) { client.delete("/api/chat-link/${SessionIdGenerator.generate().value}") { header("X-Forwarded-For", header) } }
+
+        assertEquals(
+            HttpStatusCode.TooManyRequests,
+            client.post("/api/chat-link") { header("X-Forwarded-For", header) }.status,
         )
     }
 

@@ -130,7 +130,71 @@ the public interface.
   room and every issued link — that is the product behaviour ("no history"), not
   a deployment bug.
 
-## Credits
+## Deploy without Docker
+
+For a host where Docker isn't the right fit — a plain Windows or Linux
+machine — `build-release.bat` / `build-release.sh` build the server and the
+web client and assemble a self-contained folder that runs as **one process**:
+the server serves the built SPA itself (see `EECK_WEB_DIST`), so nothing
+else — no nginx, no container — is needed to view the app.
+
+```bat
+build-release.bat            :: Windows
+```
+```bash
+./build-release.sh           # Linux
+```
+
+Result: `release/eeck/`, with `run.bat` / `run.sh` inside it — copy that
+folder anywhere (another machine, no build tools needed there) and run it.
+It needs a Java 21 runtime on the target machine (a JRE is enough) — the
+build prints where to get one (Temurin) as a reminder when it finishes.
+
+```bat
+release\eeck\run.bat                 :: plain HTTP, port 3001
+```
+```bash
+release/eeck/run.sh                  # plain HTTP, port 3001
+```
+
+Fine for local use or an internal network. **Not for the open internet** —
+see the HTTPS warning above; the same reasoning applies here.
+
+### HTTPS, without Docker
+
+The build also bundles [Caddy](https://caddyserver.com) (if `curl`/`tar` are
+available — both ship with Windows and every mainstream Linux distro) so the
+release can front itself with the same automatic-HTTPS setup as
+`docker-compose.tls.yml`, just without Docker:
+
+```bat
+release\eeck\run-https.bat chat.example.com
+```
+```bash
+release/eeck/run-https.sh chat.example.com
+```
+
+This binds the app to `127.0.0.1` only and puts Caddy in front of it on
+ports 80/443, fetching and renewing a Let's Encrypt certificate for that
+domain automatically. Needs, before running:
+
+- that domain's DNS **A record already pointing at this machine's public IP**
+  (Let's Encrypt has to reach the machine to verify it);
+- ports **80 and 443 open inbound** (firewall, and your router/cloud
+  security group if applicable) — both are needed even for an HTTPS-only
+  site, since port 80 answers the ACME challenge and redirects to 443;
+- permission to bind those ports: run as Administrator on Windows; on Linux,
+  either run as root or grant the binary the capability once so nothing
+  needs to run as root at all — `sudo setcap 'cap_net_bind_service=+ep'
+  release/eeck/caddy` (`run-https.sh` prints this if it fails without it).
+
+For a real server, don't run these by hand in a terminal — install them as
+systemd services instead, so they survive logout and restart on crash or
+reboot. `release/eeck/eeck.service.template` and
+`eeck-caddy.service.template` (Linux only; both copied into the release
+folder) have the exact steps in their header comments.
+
+
 
 This project reimplements the protocol and design of
 [muke1908/chat-e2ee](https://github.com/muke1908/chat-e2ee) — see

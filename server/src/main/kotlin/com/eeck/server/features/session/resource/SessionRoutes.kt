@@ -39,6 +39,11 @@ private const val BEARER_PREFIX = "Bearer "
  */
 fun Route.sessionRoutes(service: SessionService) {
     route("/chat-link") {
+        // All three endpoints share one per-client budget. GET and DELETE aren't
+        // guessing targets — a chat id is 144 bits and an owner token 256 —
+        // but an unmetered endpoint is still a bare request-volume target, and
+        // POST is the only one of the three actually rate-limited by the
+        // WebSocket connection cap or anything else downstream.
         rateLimit(CREATE_LINK_RATE_LIMIT) {
             post {
                 val created = service.createLink()
@@ -52,40 +57,40 @@ fun Route.sessionRoutes(service: SessionService) {
                     ),
                 )
             }
-        }
 
-        get("/status/{channel}") {
-            val channel = call.parameters["channel"]!!
-            if (!SessionIdGenerator.isValidFormat(channel)) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed chat id."))
-                return@get
-            }
-            when (val outcome = service.status(ChatId(channel))) {
-                is Outcome.Success ->
-                    call.respond(HttpStatusCode.OK, StatusResponse(status = "ok", state = "ACTIVE"))
-                is Outcome.Failure -> {
-                    val state = if (outcome.error == DomainError.LinkAlreadyDeleted) "DELETED" else "NOT_FOUND"
-                    val message = if (outcome.error == DomainError.LinkAlreadyDeleted) "Channel deleted" else "Invalid channel"
-                    call.respond(outcome.error.httpStatus, StatusErrorResponse(error = message, state = state))
+            get("/status/{channel}") {
+                val channel = call.parameters["channel"]!!
+                if (!SessionIdGenerator.isValidFormat(channel)) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed chat id."))
+                    return@get
+                }
+                when (val outcome = service.status(ChatId(channel))) {
+                    is Outcome.Success ->
+                        call.respond(HttpStatusCode.OK, StatusResponse(status = "ok", state = "ACTIVE"))
+                    is Outcome.Failure -> {
+                        val state = if (outcome.error == DomainError.LinkAlreadyDeleted) "DELETED" else "NOT_FOUND"
+                        val message = if (outcome.error == DomainError.LinkAlreadyDeleted) "Channel deleted" else "Invalid channel"
+                        call.respond(outcome.error.httpStatus, StatusErrorResponse(error = message, state = state))
+                    }
                 }
             }
-        }
 
-        delete("/{channel}") {
-            val channel = call.parameters["channel"]!!
-            if (!SessionIdGenerator.isValidFormat(channel)) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed chat id."))
-                return@delete
-            }
-            val token = call.request.headers[HttpHeaders.Authorization]
-                ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = true) }
-                ?.substring(BEARER_PREFIX.length)
-                ?.trim()
-            when (val outcome = service.delete(ChatId(channel), token)) {
-                is Outcome.Success -> call.respond(HttpStatusCode.OK, DeleteResponse(status = "ok"))
-                is Outcome.Failure -> {
-                    val message = if (outcome.error == DomainError.NotLinkOwner) "Only the link's creator can delete it." else "Not found"
-                    call.respond(outcome.error.httpStatus, ErrorResponse(message))
+            delete("/{channel}") {
+                val channel = call.parameters["channel"]!!
+                if (!SessionIdGenerator.isValidFormat(channel)) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed chat id."))
+                    return@delete
+                }
+                val token = call.request.headers[HttpHeaders.Authorization]
+                    ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = true) }
+                    ?.substring(BEARER_PREFIX.length)
+                    ?.trim()
+                when (val outcome = service.delete(ChatId(channel), token)) {
+                    is Outcome.Success -> call.respond(HttpStatusCode.OK, DeleteResponse(status = "ok"))
+                    is Outcome.Failure -> {
+                        val message = if (outcome.error == DomainError.NotLinkOwner) "Only the link's creator can delete it." else "Not found"
+                        call.respond(outcome.error.httpStatus, ErrorResponse(message))
+                    }
                 }
             }
         }

@@ -1,0 +1,51 @@
+# Optional: run the Linux release under systemd instead of a foreground
+# shell, so it survives logout and restarts on crash or reboot.
+#
+# 1. Put the release folder somewhere permanent, e.g.:
+#      sudo mkdir -p /opt/eeck
+#      sudo cp -r release/eeck/. /opt/eeck/
+#      sudo chmod +x /opt/eeck/server/bin/server
+# 2. Create a dedicated user (never run a public-facing service as root):
+#      sudo useradd --system --home /opt/eeck --shell /usr/sbin/nologin eeck
+#      sudo chown -R eeck:eeck /opt/eeck
+# 3. Fill in the placeholders below, save as /etc/systemd/system/eeck.service.
+# 4. sudo systemctl daemon-reload && sudo systemctl enable --now eeck
+#    sudo systemctl status eeck     # check it came up
+#    sudo journalctl -u eeck -f     # follow its logs
+#
+# Exposed to the open internet? Plain HTTP is not a safe way to run this -
+# put Caddy in front of it for automatic HTTPS: uncomment EECK_HOST below,
+# then see eeck-caddy.service.template for the second unit that does it.
+
+[Unit]
+Description=eeck (E2EE chat)
+After=network.target
+
+[Service]
+Type=simple
+User=eeck
+Group=eeck
+WorkingDirectory=/opt/eeck
+Environment=EECK_PORT=3001
+Environment=EECK_WEB_DIST=web-dist
+# Uncomment BOTH when Caddy (eeck-caddy.service.template) runs in front of
+# this on the same host - EECK_HOST keeps this process reachable only
+# through Caddy, not directly over plain HTTP on EECK_PORT; EECK_TRUST_PROXY
+# is then required too, or every client would look like 127.0.0.1 (Caddy
+# itself) to the per-client rate limits, and they would all share one
+# budget. Caddy's reverse_proxy sets X-Forwarded-For itself, same as this
+# repo's Docker deployment's nginx does - see README's "Limits and logs".
+#Environment=EECK_HOST=127.0.0.1
+#Environment=EECK_TRUST_PROXY=true
+ExecStart=/opt/eeck/server/bin/server
+Restart=on-failure
+RestartSec=2
+
+# Light sandboxing: this process needs network and its own directory, nothing else.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
