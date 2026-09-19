@@ -1,14 +1,23 @@
 import { useState } from 'react'
+import { draftFor, rememberDraft } from '../../../shared/lib/message-draft'
 
 interface MessageComposerProps {
+    chatId: string
     /** Only the session's `ready` state may encrypt, so the composer is gated on it. */
     enabled: boolean
     onSend: (text: string) => Promise<void>
 }
 
-export function MessageComposer({ enabled, onSend }: MessageComposerProps) {
-    const [draft, setDraft] = useState('')
+export function MessageComposer({ chatId, enabled, onSend }: MessageComposerProps) {
+    const [draft, setDraftState] = useState(() => draftFor(chatId))
     const [sendError, setSendError] = useState<string | null>(null)
+
+    // Every keystroke persists, not just on unmount: a crashed tab or a closed
+    // laptop lid leaves no chance to flush a draft that only lived in memory.
+    const setDraft = (text: string) => {
+        setDraftState(text)
+        rememberDraft(chatId, text)
+    }
 
     const handleSend = async () => {
         const text = draft.trim()

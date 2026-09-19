@@ -124,7 +124,7 @@ export function ChatWindow(props: ChatWindowProps) {
 
                     <div className="composer">
                         <FileAttachButton enabled={canSend(connection)} onSend={props.onSendFile} />
-                        <MessageComposer enabled={canSend(connection)} onSend={props.onSend} />
+                        <MessageComposer chatId={chatId} enabled={canSend(connection)} onSend={props.onSend} />
                     </div>
                 </>
             )}
