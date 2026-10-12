@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
     Avatar,
     canSend,
@@ -13,13 +13,18 @@ import {
     type Profile,
     type TransferProgress,
 } from '../../../entities/session'
+import type { ServerEndpoint } from '../../../shared/api'
 import { JoinRequestCard } from '../../../features/admit-peer'
 import { DeleteLinkButton } from '../../../features/delete-link'
 import { ProfileEditor } from '../../../features/edit-profile'
+import { ThemeToggle } from '../../../features/toggle-theme'
 import { FileAttachButton } from '../../../features/send-file'
 import { MessageComposer } from '../../../features/send-message'
+import { LogOutIcon } from '../../../shared/ui/icons'
+import './ChatWindow.css'
 
 interface ChatWindowProps {
+    endpoint: ServerEndpoint
     chatId: string
     /** Key fingerprint of this tab, or null until the key has loaded. */
     selfId: PeerId | null
@@ -44,23 +49,38 @@ export function ChatWindow(props: ChatWindowProps) {
     const [editingProfile, setEditingProfile] = useState(false)
     const isHost = selfId !== null && hostId === selfId
 
+    // Follow the conversation: new messages scroll into view, as in any chat app.
+    const listRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        const list = listRef.current
+        if (list) list.scrollTop = list.scrollHeight
+    }, [messages.length])
+
     return (
         <div className="screen chat-screen">
             <header className="chat-header">
-                <div className="peer-status">
+                <div className="chat-header-main">
                     <span className={`status-dot ${peersOf(connection).length > 0 ? 'online' : 'offline'}`} />
-                    {describePresence(connection)}
+                    <div className="presence">
+                        <div className="presence-line">{describePresence(connection)}</div>
+                        <div className="connection-status" data-status={connection.status}>
+                            {describeTransport(connection)}
+                        </div>
+                    </div>
+                    {isHost && <span className="host-badge">host</span>}
                 </div>
-                {isHost && <span className="host-badge">host</span>}
-                <div className="connection-status">{describeTransport(connection)}</div>
-                <button className="self-profile secondary" onClick={() => setEditingProfile((open) => !open)}>
-                    <OwnAvatar profile={ownProfile} />
-                    {ownProfile.name || 'Set your name'}
-                </button>
-                <button className="secondary" onClick={props.onLeave}>
-                    Leave
-                </button>
-                <DeleteLinkButton chatId={chatId} onDeleted={props.onDeleted} />
+                <div className="chat-header-actions">
+                    <button className="self-profile secondary" onClick={() => setEditingProfile((open) => !open)}>
+                        <OwnAvatar profile={ownProfile} />
+                        <span className="btn-label">{ownProfile.name || 'Set your name'}</span>
+                    </button>
+                    <ThemeToggle />
+                    <button className="secondary" onClick={props.onLeave} title="Leave the chat" aria-label="Leave">
+                        <LogOutIcon size={18} />
+                        <span className="btn-label">Leave</span>
+                    </button>
+                    <DeleteLinkButton endpoint={props.endpoint} chatId={chatId} onDeleted={props.onDeleted} />
+                </div>
             </header>
 
             {selfId && (
@@ -93,10 +113,11 @@ export function ChatWindow(props: ChatWindowProps) {
                 />
             ))}
 
-            {connection.status === 'terminated' && <p className="error">{describeTermination(connection)}</p>}
+            {connection.status === 'terminated' && <p className="error chat-notice">{describeTermination(connection)}</p>}
 
             {connection.status === 'pending' ? (
                 <div className="waiting-room">
+                    <span className="waiting-orb" aria-hidden="true" />
                     <p>
                         Waiting for{' '}
                         <strong>{hostId && hostId in profiles ? displayName(hostId, profiles) : 'the host'}</strong> to
@@ -109,18 +130,28 @@ export function ChatWindow(props: ChatWindowProps) {
                 </div>
             ) : (
                 <>
-                    <div className="message-list">
+                    <div className="message-list" ref={listRef}>
+                        {messages.length === 0 && (
+                            <p className="empty-chat">No messages yet. Everything here is end-to-end encrypted.</p>
+                        )}
                         {messages.map((m) => (
                             <MessageView key={m.id} message={m} profiles={profiles} selfId={selfId} />
                         ))}
                     </div>
 
-                    {transfers.map((t) => (
-                        <p key={t.fileId} className="hint">
-                            {t.direction === 'incoming' ? 'Receiving' : 'Sending'} {t.name} —{' '}
-                            {Math.round((t.done / t.total) * 100)}%
-                        </p>
-                    ))}
+                    {transfers.length > 0 && (
+                        <div className="transfers">
+                            {transfers.map((t) => (
+                                <div key={t.fileId} className="transfer">
+                                    <span className="hint">
+                                        {t.direction === 'incoming' ? 'Receiving' : 'Sending'} {t.name} —{' '}
+                                        {Math.round((t.done / t.total) * 100)}%
+                                    </span>
+                                    <progress value={t.done} max={t.total} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="composer">
                         <FileAttachButton enabled={canSend(connection)} onSend={props.onSendFile} />

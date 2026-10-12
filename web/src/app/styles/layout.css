@@ -1,0 +1,56 @@
+/* Screen scaffolding shared by every page. */
+.screen {
+    width: 100%;
+    max-width: 520px;
+    min-height: 100dvh;
+    padding: calc(2.5rem + var(--safe-top)) calc(1.25rem + var(--safe-right)) calc(2rem + var(--safe-bottom))
+        calc(1.25rem + var(--safe-left));
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 1.25rem;
+    animation: rise var(--dur-slow) var(--ease) both;
+}
+
+.screen-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: 1.9rem;
+}
+
+.subtitle {
+    margin: 0;
+    color: var(--text-dim);
+}
+
+.card {
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--shadow);
+}
+
+@media (min-width: 700px) {
+    .screen {
+        padding-block: 3.5rem;
+    }
+    .card {
+        padding: 1.6rem;
+    }
+}

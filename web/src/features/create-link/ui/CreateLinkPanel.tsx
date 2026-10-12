@@ -1,12 +1,17 @@
 import { useState } from 'react'
-import { createLink } from '../../../shared/api'
+import { createLink, type ServerEndpoint } from '../../../shared/api'
 import { rememberOwnerToken } from '../../../shared/lib/owner-token'
+import { CheckIcon, CopyIcon } from '../../../shared/ui/icons'
+import './CreateLinkPanel.css'
 
 interface CreateLinkPanelProps {
+    endpoint: ServerEndpoint
+    /** Goes into the shared link so whoever opens it connects to the same server. Omitted for a same-origin build. */
+    server?: string
     onEnterChat: (chatId: string) => void
 }
 
-export function CreateLinkPanel({ onEnterChat }: CreateLinkPanelProps) {
+export function CreateLinkPanel({ endpoint, server, onEnterChat }: CreateLinkPanelProps) {
     const [link, setLink] = useState<{ chatId: string; url: string } | null>(null)
     const [copied, setCopied] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -16,10 +21,11 @@ export function CreateLinkPanel({ onEnterChat }: CreateLinkPanelProps) {
         setLoading(true)
         setError(null)
         try {
-            const response = await createLink()
+            const response = await createLink(endpoint)
             // Only this browser gets to delete the chat; the shared URL never carries the token.
             rememberOwnerToken(response.hash, response.ownerToken)
             const url = new URL(window.location.href)
+            if (server) url.searchParams.set('server', server)
             url.searchParams.set('chatId', response.hash)
             setLink({ chatId: response.hash, url: url.toString() })
         } catch (err) {
@@ -37,7 +43,7 @@ export function CreateLinkPanel({ onEnterChat }: CreateLinkPanelProps) {
     }
 
     return (
-        <>
+        <div className="create-link">
             {!link && (
                 <button onClick={() => void handleCreate()} disabled={loading}>
                     {loading ? 'Creating link…' : 'Create a chat link'}
@@ -48,8 +54,13 @@ export function CreateLinkPanel({ onEnterChat }: CreateLinkPanelProps) {
 
             {link && (
                 <div className="link-box">
-                    <input readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} />
-                    <button onClick={() => void handleCopy()}>{copied ? 'Copied!' : 'Copy link'}</button>
+                    <div className="link-row">
+                        <input readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} aria-label="Chat link" />
+                        <button onClick={() => void handleCopy()}>
+                            {copied ? <CheckIcon /> : <CopyIcon />}
+                            {copied ? 'Copied!' : 'Copy link'}
+                        </button>
+                    </div>
                     <p className="hint">
                         Share this link with the people you want to chat with. Whoever is in the chat first lets
                         everyone else in.
@@ -59,6 +70,6 @@ export function CreateLinkPanel({ onEnterChat }: CreateLinkPanelProps) {
                     </button>
                 </div>
             )}
-        </>
+        </div>
     )
 }

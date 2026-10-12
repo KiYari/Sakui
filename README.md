@@ -66,6 +66,49 @@ Ktor container is not published to the host — nginx is the only way in.
 `web` waits for the server's `/api/health` to pass before accepting traffic, so
 the first page load can't land on a proxy whose upstream isn't listening yet.
 
+### Choosing a server from the client
+
+Messages can't travel without a server, so the web client can be built to ask
+for one first (`EECK_SERVER_MODE`, baked in at build time):
+
+| Mode | First screen | How the browser reaches the server |
+| --- | --- | --- |
+| `same-origin` (default) | none | the server behind the same nginx |
+| `relay` | server IPv4 address | this web host's nginx forwards `/s/<ip>:<port>/api\|ws` to it, so the server may be plain HTTP. Private/loopback addresses are refused |
+| `direct` | server IP or host name | the browser connects itself over HTTPS (an IP uses `<ip-with-dashes>.sslip.io`, so the server needs Caddy/TLS). Used for the Vercel build (`web/vercel.json`) |
+
+`EECK_SERVER_MODE=relay docker compose up -d --build` enables the relay. For
+`direct`, list the web client's host in the server's `EECK_CORS_HOST`
+(comma separated). The chosen server is stored in the shared link
+(`?server=…&chatId=…`), so whoever opens it connects to the same server; the
+address is checked against `/api/health` before continuing.
+
+### Access key
+
+Put it in a file named **`.env`** in the project root (copy `.env.example`; typing it into
+`.env.example` does nothing, nothing reads that file). `docker compose` reads `.env` by itself, and
+the server reads it too when started any other way (IntelliJ, `./gradlew :server:run`, the
+release scripts), looking in the working directory and the two folders above it; a real
+environment variable still wins over the file. **Restart the server after changing it**: it logs
+`Configuration read from: ...` and `Access key required: N key(s)` at startup, so you can see it
+took effect.
+
+Set `EECK_ACCESS_KEY` on a server (several keys, comma separated, are all
+accepted, which lets you rotate) and it refuses everything except `/api/health`
+without that key: no creating links, no joining chats. The client sees from
+`/api/health` that a key is required and asks for it on the first screen, then
+checks it and remembers it per server in that browser. It is never put in a
+chat link. A WebSocket handshake cannot carry headers, so `/ws` takes it as
+`?key=` (REST accepts only the header); the server and the bundled nginx never log
+query strings. The check sits on the protected routes themselves, so no spelling of a
+URL gets past it. The server logs at startup whether a key is required, and every
+refusal with the client address. If a browser's key stops working (changed and the
+server restarted), the client notices and returns to the key prompt instead of
+retrying forever. Wrong keys
+are rate-limited (10 per minute per address), so the key is only as strong as
+its length: use something like `openssl rand -hex 24`. A same-origin build asks
+only for the key. Leaving the variable empty keeps the server open.
+
 Config is optional — copy `.env.example` to `.env` to change the published port.
 
 ### HTTPS

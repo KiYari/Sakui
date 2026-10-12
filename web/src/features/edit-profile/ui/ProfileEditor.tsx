@@ -5,6 +5,7 @@ import {
     saveOwnProfile,
     type Profile,
 } from '../../../entities/session'
+import './ProfileEditor.css'
 
 interface ProfileEditorProps {
     profile: Profile

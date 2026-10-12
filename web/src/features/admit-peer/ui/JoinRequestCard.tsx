@@ -1,4 +1,5 @@
 import { Avatar, displayName, type PeerId, type Profile } from '../../../entities/session'
+import './JoinRequestCard.css'
 
 interface JoinRequestCardProps {
     peerId: PeerId

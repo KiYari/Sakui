@@ -1,0 +1,49 @@
+.profile-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    animation: drop-in var(--dur) var(--ease);
+}
+
+.profile-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.swatch {
+    width: 2.1rem;
+    min-height: 0;
+    height: 2.1rem;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    box-shadow: none;
+    transition:
+        transform var(--dur) var(--ease-spring),
+        border-color var(--dur) var(--ease);
+}
+
+.swatch:hover:not(:disabled) {
+    transform: scale(1.12);
+    box-shadow: none;
+}
+
+.swatch.selected {
+    border-color: var(--text);
+    transform: scale(1.18);
+}
+
+.profile-actions {
+    display: flex;
+    gap: 0.5rem;
+}

@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { deleteLink } from '../../../shared/api'
+import { deleteLink, type ServerEndpoint } from '../../../shared/api'
 import { forgetOwnerToken, ownerTokenFor } from '../../../shared/lib/owner-token'
+import { TrashIcon } from '../../../shared/ui/icons'
 
 interface DeleteLinkButtonProps {
+    endpoint: ServerEndpoint
     chatId: string
     onDeleted: () => void
 }
@@ -11,7 +13,7 @@ interface DeleteLinkButtonProps {
  * Rendered only in the browser that created the link — the one holding its
  * owner token. Everyone else would just get a 403, so they aren't offered it.
  */
-export function DeleteLinkButton({ chatId, onDeleted }: DeleteLinkButtonProps) {
+export function DeleteLinkButton({ endpoint, chatId, onDeleted }: DeleteLinkButtonProps) {
     const [token] = useState(() => ownerTokenFor(chatId))
     const [error, setError] = useState<string | null>(null)
 
@@ -19,7 +21,7 @@ export function DeleteLinkButton({ chatId, onDeleted }: DeleteLinkButtonProps) {
 
     const handleDelete = async () => {
         try {
-            await deleteLink(chatId, token)
+            await deleteLink(endpoint, chatId, token)
             forgetOwnerToken(chatId)
             onDeleted()
         } catch (err) {
@@ -31,8 +33,9 @@ export function DeleteLinkButton({ chatId, onDeleted }: DeleteLinkButtonProps) {
 
     return (
         <>
-            <button className="danger" onClick={() => void handleDelete()}>
-                Delete chat
+            <button className="danger" onClick={() => void handleDelete()} title="Delete chat for everyone" aria-label="Delete chat">
+                <TrashIcon size={18} />
+                <span className="btn-label">Delete</span>
             </button>
             {error && <span className="error">{error}</span>}
         </>

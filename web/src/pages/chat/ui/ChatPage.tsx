@@ -1,14 +1,19 @@
 import { useCallback } from 'react'
+import { useAccessWatch } from '../../../features/select-server'
 import { useChatSession, type PeerId, type Profile } from '../../../entities/session'
+import type { ServerEndpoint } from '../../../shared/api'
 import { ChatWindow } from '../../../widgets/chat-window'
 
 interface ChatPageProps {
+    endpoint: ServerEndpoint
     chatId: string
     onLeave: () => void
 }
 
-export function ChatPage({ chatId, onLeave }: ChatPageProps) {
-    const { session, snapshot } = useChatSession(chatId)
+export function ChatPage({ endpoint, chatId, onLeave }: ChatPageProps) {
+    const { session, snapshot } = useChatSession(endpoint, chatId)
+    const status = snapshot.connection.status
+    useAccessWatch(endpoint, status === 'connecting' || status === 'reconnecting')
 
     const handleSend = useCallback((text: string) => session.sendMessage(text), [session])
     const handleSendFile = useCallback((file: File) => session.sendFile(file), [session])
@@ -26,6 +31,7 @@ export function ChatPage({ chatId, onLeave }: ChatPageProps) {
 
     return (
         <ChatWindow
+            endpoint={endpoint}
             chatId={chatId}
             selfId={snapshot.selfId}
             hostId={snapshot.hostId}

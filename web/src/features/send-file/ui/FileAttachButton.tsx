@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { formatBytes, MAX_FILE_BYTES } from '../../../entities/session'
+import { PaperclipIcon } from '../../../shared/ui/icons'
 
 interface FileAttachButtonProps {
     enabled: boolean
@@ -36,12 +37,13 @@ export function FileAttachButton({ enabled, onSend }: FileAttachButtonProps) {
                 onChange={(e) => void handlePick(e.target.files?.[0])}
             />
             <button
-                className="secondary"
+                className="secondary icon"
+                aria-label="Attach a file"
                 title={`Attach a file (up to ${formatBytes(MAX_FILE_BYTES)})`}
                 disabled={!enabled || busy}
                 onClick={() => inputRef.current?.click()}
             >
-                {busy ? 'Sending…' : 'Attach'}
+                {busy ? '…' : <PaperclipIcon />}
             </button>
         </>
     )

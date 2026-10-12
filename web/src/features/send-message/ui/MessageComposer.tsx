@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { draftFor, rememberDraft } from '../../../shared/lib/message-draft'
+import { SendIcon } from '../../../shared/ui/icons'
 
 interface MessageComposerProps {
     chatId: string
@@ -39,14 +40,22 @@ export function MessageComposer({ chatId, enabled, onSend }: MessageComposerProp
             <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
+                enterKeyHint="send"
+                autoComplete="off"
                 onKeyDown={(e) => {
                     if (e.key === 'Enter') void handleSend()
                 }}
                 placeholder={enabled ? 'Type a message…' : 'Waiting for keys to be exchanged…'}
                 disabled={!enabled}
             />
-            <button onClick={() => void handleSend()} disabled={!enabled || !draft.trim()}>
-                Send
+            <button
+                className="icon"
+                aria-label="Send"
+                title="Send"
+                onClick={() => void handleSend()}
+                disabled={!enabled || !draft.trim()}
+            >
+                <SendIcon />
             </button>
         </>
     )

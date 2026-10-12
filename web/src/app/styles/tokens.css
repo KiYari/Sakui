@@ -1,0 +1,100 @@
+/* Design tokens. Everything visual that is shared reads from these, so a theme
+   is a different set of values, never different rules.
+
+   Theme selection: <html data-theme="light|dark"> is an explicit choice; with
+   no attribute the OS preference decides. The light values therefore appear
+   twice (explicit, and "system says light") because plain CSS cannot share
+   them between a selector and a media query. Keep the two blocks identical. */
+:root {
+    --radius-sm: 10px;
+    --radius: 14px;
+    --radius-lg: 22px;
+
+    --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-fast: 140ms;
+    --dur: 260ms;
+    --dur-slow: 520ms;
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Dark: the default, and the explicit choice. */
+:root,
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #0b0d14;
+    --bg-glow-1: rgba(99, 102, 241, 0.28);
+    --bg-glow-2: rgba(168, 85, 247, 0.2);
+    --bg-glow-3: rgba(34, 211, 238, 0.14);
+    --surface: rgba(255, 255, 255, 0.045);
+    --surface-solid: #151824;
+    --surface-raised: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --text: #eceef5;
+    --text-dim: #9097ab;
+    --accent: #7c83ff;
+    --accent-gradient: linear-gradient(135deg, #6f76ff 0%, #a45cff 100%);
+    --on-accent: #fff;
+    --danger: #ff6b7a;
+    --online: #3ddc84;
+    --offline: #596077;
+    --shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.6);
+    --glow: 0 0 0 1px rgba(124, 131, 255, 0.5), 0 8px 30px -8px rgba(124, 131, 255, 0.55);
+    --bubble-peer: rgba(255, 255, 255, 0.07);
+}
+
+/* Light, when the OS asks for it and the user has not chosen. */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        color-scheme: light;
+        --bg: #f3f4fb;
+        --bg-glow-1: rgba(99, 102, 241, 0.22);
+        --bg-glow-2: rgba(217, 119, 255, 0.16);
+        --bg-glow-3: rgba(56, 189, 248, 0.16);
+        --surface: rgba(255, 255, 255, 0.72);
+        --surface-solid: #ffffff;
+        --surface-raised: rgba(255, 255, 255, 0.95);
+        --border: rgba(20, 24, 50, 0.1);
+        --border-strong: rgba(20, 24, 50, 0.22);
+        --text: #161a2e;
+        --text-dim: #626a85;
+        --accent: #4f56e8;
+        --danger: #e0364c;
+        --online: #12a150;
+        --offline: #a5abc0;
+        --shadow: 0 10px 40px -14px rgba(40, 48, 110, 0.25);
+        --glow: 0 0 0 1px rgba(79, 86, 232, 0.45), 0 8px 30px -8px rgba(79, 86, 232, 0.45);
+        --bubble-peer: #ffffff;
+    }
+}
+
+/* Light, chosen explicitly. */
+:root[data-theme='light'] {
+    color-scheme: light;
+    --bg: #f3f4fb;
+    --bg-glow-1: rgba(99, 102, 241, 0.22);
+    --bg-glow-2: rgba(217, 119, 255, 0.16);
+    --bg-glow-3: rgba(56, 189, 248, 0.16);
+    --surface: rgba(255, 255, 255, 0.72);
+    --surface-solid: #ffffff;
+    --surface-raised: rgba(255, 255, 255, 0.95);
+    --border: rgba(20, 24, 50, 0.1);
+    --border-strong: rgba(20, 24, 50, 0.22);
+    --text: #161a2e;
+    --text-dim: #626a85;
+    --accent: #4f56e8;
+    --danger: #e0364c;
+    --online: #12a150;
+    --offline: #a5abc0;
+    --shadow: 0 10px 40px -14px rgba(40, 48, 110, 0.25);
+    --glow: 0 0 0 1px rgba(79, 86, 232, 0.45), 0 8px 30px -8px rgba(79, 86, 232, 0.45);
+    --bubble-peer: #ffffff;
+}

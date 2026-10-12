@@ -1,0 +1,46 @@
+.server-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.5rem 0.5rem 0.5rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+.server-line code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+}
+
+.server-line button {
+    min-height: 34px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.82rem;
+}
+
+.home-profile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.home-profile h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.home-profile .profile-editor {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+    animation: none;
+}

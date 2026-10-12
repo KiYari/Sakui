@@ -1,0 +1,33 @@
+.join-request {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.75rem;
+    margin: 0.6rem 1rem 0;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface-solid));
+    font-size: 0.9rem;
+    box-shadow: var(--glow);
+    animation: drop-in var(--dur) var(--ease-spring);
+}
+
+.join-request-who {
+    flex: 1;
+    min-width: 10rem;
+}
+
+.join-request-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+    .join-request-actions {
+        width: 100%;
+    }
+    .join-request-actions button {
+        flex: 1;
+    }
+}

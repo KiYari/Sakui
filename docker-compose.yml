@@ -18,6 +18,8 @@ services:
       # Take the client address from nginx's X-Forwarded-For, which nginx sets
       # itself. Safe only because this container is reachable solely via nginx.
       EECK_TRUST_PROXY: "true"
+      # Shared secret(s) clients must present to use this server at all. Empty = open.
+      EECK_ACCESS_KEY: "${EECK_ACCESS_KEY:-}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3001/api/health"]
@@ -31,6 +33,10 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
+      args:
+        # same-origin | relay — see web/Dockerfile. `relay` makes the first screen
+        # ask for a server's IPv4 address and forwards to it.
+        EECK_SERVER_MODE: "${EECK_SERVER_MODE:-same-origin}"
     ports:
       - "${EECK_HTTP_PORT:-80}:80"
     depends_on:

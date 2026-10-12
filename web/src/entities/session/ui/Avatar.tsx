@@ -1,5 +1,6 @@
 import { colorOf, displayName, type Profile } from '../model/profile'
 import type { PeerId } from '../model/types'
+import './Avatar.css'
 
 interface AvatarProps {
     peerId: PeerId

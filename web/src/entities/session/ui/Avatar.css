@@ -1,0 +1,24 @@
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.9em;
+    height: 1.9em;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* A fixed palette, selected by index: peers choose a number, never a CSS value. */
+.avatar-color-0 { background: linear-gradient(135deg, #5b8cff, #7c5cff); }
+.avatar-color-1 { background: linear-gradient(135deg, #2fcf72, #1fa38a); }
+.avatar-color-2 { background: linear-gradient(135deg, #ff9a3d, #ff6a3d); }
+.avatar-color-3 { background: linear-gradient(135deg, #c86bff, #8f5cff); }
+.avatar-color-4 { background: linear-gradient(135deg, #ff5c8a, #ff7a5c); }
+.avatar-color-5 { background: linear-gradient(135deg, #1fb5ad, #2f8cff); }
+.avatar-color-6 { background: linear-gradient(135deg, #e0b52c, #e08a2c); }
+.avatar-color-7 { background: linear-gradient(135deg, #7a869a, #596077); }

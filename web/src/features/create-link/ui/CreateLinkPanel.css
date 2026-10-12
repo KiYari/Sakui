@@ -1,0 +1,35 @@
+.create-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.create-link > button {
+    min-height: 52px;
+    font-size: 1rem;
+}
+
+.link-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    animation: pop var(--dur-slow) var(--ease-spring) both;
+}
+
+.link-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.link-row input {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 420px) {
+    .link-row {
+        flex-direction: column;
+    }
+}

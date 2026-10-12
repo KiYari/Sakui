@@ -5,6 +5,8 @@
  * frame bodies.
  */
 
+import { SAME_ORIGIN, socketUrl, type ServerEndpoint } from '../endpoint'
+
 export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[]
 
 export interface HelloFrame {
@@ -111,6 +113,8 @@ const DRAIN_POLL_MS = 25
 const TERMINAL_CLOSE_CODES = new Set([4000, 4001, 4002, 4003, 4004, 4005, 4006])
 
 export class E2eeClient {
+    constructor(private readonly endpoint: ServerEndpoint = SAME_ORIGIN) {}
+
     private socket: WebSocket | undefined
     private status: ConnectionStatus = 'closed'
     private chatId: string | undefined
@@ -184,8 +188,7 @@ export class E2eeClient {
         if (!this.chatId) return
         this.setStatus(this.status === 'closed' ? 'connecting' : 'reconnecting')
 
-        const url = new URL('/ws', window.location.origin)
-        url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+        const url = socketUrl(this.endpoint, '/ws')
         url.searchParams.set('chatId', this.chatId)
 
         const socket = new WebSocket(url)

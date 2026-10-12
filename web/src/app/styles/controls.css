@@ -1,0 +1,121 @@
+/* Buttons, inputs and the small text styles every screen shares. */
+button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.55rem 1.1rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--accent-gradient);
+    color: var(--on-accent);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 18px -8px rgba(124, 131, 255, 0.7);
+    transition:
+        transform var(--dur-fast) var(--ease),
+        box-shadow var(--dur) var(--ease),
+        filter var(--dur) var(--ease),
+        background-color var(--dur) var(--ease);
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(1.1);
+    box-shadow: var(--glow);
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+button:disabled {
+    background: var(--surface);
+    color: var(--text-dim);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    box-shadow: none;
+    backdrop-filter: blur(10px);
+}
+
+button.secondary:hover:not(:disabled) {
+    background: var(--surface-raised);
+    border-color: var(--border-strong);
+    box-shadow: none;
+    filter: none;
+}
+
+button.danger {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+    color: var(--danger);
+    box-shadow: none;
+}
+
+button.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    box-shadow: none;
+    filter: none;
+}
+
+/* Square icon-only button (theme toggle, send, attach). */
+button.icon {
+    width: 44px;
+    padding: 0;
+    flex: none;
+}
+
+input {
+    min-height: 44px;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    /* 16px keeps iOS Safari from zooming the page when a field is focused. */
+    font-size: 1rem;
+    transition:
+        border-color var(--dur) var(--ease),
+        box-shadow var(--dur) var(--ease),
+        background-color var(--dur) var(--ease);
+}
+
+input::placeholder {
+    color: var(--text-dim);
+}
+
+input:hover:not(:disabled) {
+    border-color: var(--border-strong);
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+input:disabled {
+    opacity: 0.6;
+}
+
+.hint {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+}
+
+.error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.88rem;
+    animation: shake 380ms var(--ease);
+}

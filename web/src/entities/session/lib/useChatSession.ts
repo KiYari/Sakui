@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import type { ServerEndpoint } from '../../../shared/api'
 import { deleteKeyPair, deleteKeyPairsForChat, getOrCreateKeyPair } from '../../../shared/lib/key-store'
 import { forgetOwnerToken } from '../../../shared/lib/owner-token'
 import { getTabScope } from '../../../shared/lib/tab-scope'
@@ -19,13 +20,14 @@ import { loadOwnProfile } from '../model/profile'
  * The key is stored per chat *and* per tab: an id is a proven key, so two
  * tabs sharing one would be the same participant and evict each other.
  */
-export function useChatSession(chatId: string): {
+export function useChatSession(endpoint: ServerEndpoint, chatId: string): {
     session: ChatSession
     snapshot: SessionSnapshot
 } {
     const session = useMemo(() => {
         const scopeKey = `${chatId}:${getTabScope()}`
         return new ChatSession(chatId, {
+            endpoint,
             loadKeyPair: () => getOrCreateKeyPair(scopeKey),
             profile: loadOwnProfile(),
             admissionMemory: createAdmissionMemory(chatId),
@@ -36,7 +38,7 @@ export function useChatSession(chatId: string): {
                 await deleteKeyPairsForChat(chatId)
             },
         })
-    }, [chatId])
+    }, [endpoint, chatId])
 
     useEffect(() => {
         session.start().catch((error: unknown) => {

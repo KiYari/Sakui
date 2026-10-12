@@ -1,6 +1,7 @@
 package com.eeck.server.app
 
 import com.eeck.server.core.config.ServerConfig
+import com.eeck.server.core.http.AccessKeyGuard
 import com.eeck.server.core.ws.ConnectionLimiter
 import com.eeck.server.core.ws.MAX_CONNECTIONS_PER_CLIENT
 import com.eeck.server.features.chat.service.ChatRoomRegistry
@@ -21,6 +22,9 @@ class AppModule(val config: ServerConfig = ServerConfig()) {
     private val roomActorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val chatRoomRegistry = ChatRoomRegistry(roomActorScope)
     val chatConnectionLimiter = ConnectionLimiter(MAX_CONNECTIONS_PER_CLIENT)
+
+    /** One guard for every protected route, so wrong-key attempts share a single budget per client. */
+    val accessKeyGuard = AccessKeyGuard(config.accessKeys)
 
     val sessionStore: SessionStore = InMemorySessionStore()
 

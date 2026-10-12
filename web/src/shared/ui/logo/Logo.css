@@ -1,0 +1,13 @@
+.logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 14px;
+    background: var(--accent-gradient);
+    color: var(--on-accent);
+    box-shadow: 0 10px 28px -10px rgba(124, 131, 255, 0.85);
+    animation: float 6s ease-in-out infinite;
+}

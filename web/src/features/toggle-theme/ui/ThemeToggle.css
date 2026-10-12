@@ -1,0 +1,15 @@
+.theme-toggle-icon {
+    display: inline-flex;
+    animation: spin-in var(--dur-slow) var(--ease-spring);
+}
+
+@keyframes spin-in {
+    from {
+        opacity: 0;
+        transform: rotate(-90deg) scale(0.4);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

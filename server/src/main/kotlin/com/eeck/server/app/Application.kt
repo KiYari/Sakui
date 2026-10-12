@@ -1,6 +1,10 @@
 package com.eeck.server.app
 
+import com.eeck.server.core.config.DotEnv
+import com.eeck.server.core.config.Env
 import com.eeck.server.core.errors.ErrorResponse
+import com.eeck.server.core.http.ACCESS_KEY_HEADER
+import com.eeck.server.core.http.accessKeyProtected
 import com.eeck.server.core.http.SecurityHeaders
 import com.eeck.server.core.http.redactOpaqueTokens
 import com.eeck.server.core.http.spaStaticFiles
@@ -38,6 +42,11 @@ import java.io.File
 import kotlin.time.Duration.Companion.minutes
 
 fun main() {
+    // A `.env` file underneath the real environment, so an IDE or `gradlew run` configures the
+    // server the same way `docker compose` does. Real variables still win.
+    val dotEnv = DotEnv.load()
+    Env.lookup = DotEnv.layered(System::getenv, dotEnv.values)
+    if (dotEnv.files.isNotEmpty()) println("Configuration read from: ${dotEnv.files.joinToString { it.absolutePath }}")
     val appModule = AppModule()
     embeddedServer(Netty, port = appModule.config.port, host = appModule.config.host) { module(appModule) }.start(wait = true)
 }
@@ -56,9 +65,14 @@ fun Application.module(app: AppModule = AppModule()) {
         }
     }
     install(CORS) {
-        allowHost(app.config.corsAllowedHost)
+        for (host in app.config.corsAllowedHosts) {
+            // A page served over https may only talk to https; plain http is for local development.
+            val local = host.substringBefore(':') in setOf("localhost", "127.0.0.1")
+            allowHost(host, schemes = if (local) listOf("http", "https") else listOf("https"))
+        }
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
+        allowHeader(ACCESS_KEY_HEADER)
         allowMethod(HttpMethod.Delete)
     }
     install(CallLogging) {
@@ -94,16 +108,33 @@ fun Application.module(app: AppModule = AppModule()) {
         }
     }
 
+    if (app.accessKeyGuard.required) {
+        log.info("Access key required: ${app.config.accessKeys.size} key(s) configured (EECK_ACCESS_KEY).")
+    } else {
+        log.warn("No access key configured (EECK_ACCESS_KEY): anyone who can reach this server may use it.")
+    }
+
     val webDistDir = File(app.config.webDistPath)
     var servingWebClient = false
     routing {
         route("/api") {
             get("/health") {
-                call.respond(HealthResponse(status = "ok"))
+                call.respond(HealthResponse(status = "ok", keyRequired = app.accessKeyGuard.required))
             }
-            sessionRoutes(app.sessionService)
+            // Everything below needs the access key. Installing the gate on the route (not matching
+            // paths up front) means no spelling of a URL can reach these handlers without passing it.
+            accessKeyProtected(app.accessKeyGuard) {
+                // A 200 here is how a client learns its key is right.
+                get("/access") {
+                    call.respond(HealthResponse(status = "ok", keyRequired = app.accessKeyGuard.required))
+                }
+                sessionRoutes(app.sessionService)
+            }
         }
-        chatWebSocket(app.chatRoomRegistry, app.sessionService, connectionLimiter = app.chatConnectionLimiter)
+        // A WebSocket handshake cannot carry headers, so this route also takes the key as `?key=`.
+        accessKeyProtected(app.accessKeyGuard, allowQueryKey = true) {
+            chatWebSocket(app.chatRoomRegistry, app.sessionService, connectionLimiter = app.chatConnectionLimiter)
+        }
         servingWebClient = spaStaticFiles(webDistDir)
     }
     if (servingWebClient) {
@@ -114,4 +145,4 @@ fun Application.module(app: AppModule = AppModule()) {
 }
 
 @Serializable
-data class HealthResponse(val status: String)
+data class HealthResponse(val status: String, val keyRequired: Boolean = false)

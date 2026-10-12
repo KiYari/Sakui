@@ -1,4 +1,4 @@
-import { E2eeClient, type ChallengeFrame, type JsonValue, type ReceiveFrame, type SendMessageFrame } from '../../../shared/api'
+import { E2eeClient, type ServerEndpoint, type ChallengeFrame, type JsonValue, type ReceiveFrame, type SendMessageFrame } from '../../../shared/api'
 import {
     base64ToBytes,
     bytesToBase64,
@@ -77,6 +77,8 @@ export interface SessionSnapshot {
 }
 
 export interface ChatSessionOptions {
+    /** The server this chat lives on; defaults to the page's own origin. */
+    endpoint?: ServerEndpoint
     cryptoProvider?: CryptoProvider
     loadKeyPair?: (chatId: string) => Promise<ChatKeyPair>
     profile?: Profile
@@ -112,7 +114,7 @@ const FAILURE_NOTICE_WINDOW_MS = 30_000
  * to, admitted room members.
  */
 export class ChatSession {
-    private readonly client = new E2eeClient()
+    private readonly client: E2eeClient
     private readonly cryptoProvider: CryptoProvider
     private readonly loadKeyPair: (chatId: string) => Promise<ChatKeyPair>
     private readonly admissionMemory: AdmissionMemory | undefined
@@ -167,6 +169,7 @@ export class ChatSession {
         private readonly chatId: string,
         options: ChatSessionOptions = {},
     ) {
+        this.client = new E2eeClient(options.endpoint)
         this.cryptoProvider = options.cryptoProvider ?? webCryptoProvider
         this.loadKeyPair = options.loadKeyPair ?? getOrCreateKeyPair
         this.admissionMemory = options.admissionMemory
