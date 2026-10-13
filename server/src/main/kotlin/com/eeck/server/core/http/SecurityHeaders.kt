@@ -1,6 +1,7 @@
 package com.eeck.server.core.http
 
 import io.ktor.server.application.createApplicationPlugin
+import io.ktor.server.request.path
 
 private val HEADERS = listOf(
     // Scripts and styles only from this origin (the Vite build emits no inline
@@ -20,6 +21,11 @@ private val HEADERS = listOf(
     "Permissions-Policy" to "camera=(), microphone=(), geolocation=(), payment=()",
 )
 
+/** The panel: same-origin assets only, no inline code, and forms may post back to it. */
+private const val ADMIN_CSP =
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; " +
+        "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+
 /**
  * The same header set `web/security-headers.conf` adds in the Docker/nginx
  * deployment — installed here too so every deployment gets it, including the
@@ -35,8 +41,17 @@ private val HEADERS = listOf(
  */
 val SecurityHeaders = createApplicationPlugin("SecurityHeaders") {
     onCall { call ->
+        // The server-rendered admin panel posts forms to itself; the client app never does.
+        val admin = call.request.path() == "/admin" || call.request.path().startsWith("/admin/")
         for ((name, value) in HEADERS) {
-            if (!call.response.headers.contains(name)) call.response.headers.append(name, value)
+            val effective = when {
+                admin && name == "Content-Security-Policy" -> ADMIN_CSP
+                // `no-referrer` makes a browser send `Origin: null` with a form post, which CORS (rightly) refuses.
+                // `same-origin` sends the real Origin to this server and still nothing to anyone else.
+                admin && name == "Referrer-Policy" -> "same-origin"
+                else -> value
+            }
+            if (!call.response.headers.contains(name)) call.response.headers.append(name, effective)
         }
     }
 }

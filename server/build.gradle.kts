@@ -21,6 +21,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-rate-limit:$ktorVersion")
     implementation("io.ktor:ktor-server-forwarded-header:$ktorVersion")
+    implementation("io.ktor:ktor-server-html-builder:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:1.6.3")
 
     testImplementation(kotlin("test"))

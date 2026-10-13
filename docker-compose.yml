@@ -20,6 +20,12 @@ services:
       EECK_TRUST_PROXY: "true"
       # Shared secret(s) clients must present to use this server at all. Empty = open.
       EECK_ACCESS_KEY: "${EECK_ACCESS_KEY:-}"
+      # Opens the admin panel at /admin. Unset, the server generates one for that run only and
+      # prints it in its log at start (docker compose logs server | grep "master key").
+      EECK_MASTER_KEY: "${EECK_MASTER_KEY:-}"
+    volumes:
+      # The password changed in the admin panel and the generated master key live here.
+      - eeck-data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3001/api/health"]
@@ -45,3 +51,6 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  eeck-data:

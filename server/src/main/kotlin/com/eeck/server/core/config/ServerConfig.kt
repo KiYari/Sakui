@@ -26,6 +26,21 @@ data class ServerConfig(
      */
     val accessKeys: List<String> = parseHostList(Env["EECK_ACCESS_KEY"] ?: ""),
     /**
+     * Opens the admin panel at `/admin` (`EECK_MASTER_KEY`). Only this key signs in
+     * there; it grants no chat access. Unset, a random one is generated on first
+     * start and printed once in the log.
+     */
+    val masterKey: String? = Env["EECK_MASTER_KEY"]?.takeIf { it.isNotBlank() },
+    /** Set to `false` to not serve `/admin` at all. */
+    val adminEnabled: Boolean = Env["EECK_ADMIN_ENABLED"]?.lowercase() != "false",
+    /**
+     * Where the admin panel keeps what it changes at runtime (the server password
+     * and the master key's hash), as `auth.json`. In Docker this must be a volume,
+     * or a changed password is lost with the container. Null keeps everything in
+     * memory only (tests); `main` defaults it to `data` so a real server persists.
+     */
+    val dataDir: String? = Env["EECK_DATA_DIR"],
+    /**
      * Honour `X-Forwarded-For` for the client address. Only safe when every
      * request reaches this process through a proxy that sets the header itself
      * (the compose deployment: the server port is never published). Enabled

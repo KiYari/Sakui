@@ -140,7 +140,7 @@ class AccessKeyTest {
     @Test
     fun `the failure budget recovers after the window and stays bounded`() {
         var now = 0L
-        val guard = AccessKeyGuard(listOf("k"), nowMillis = { now })
+        val guard = AccessKeyGuard.ofKeys(listOf("k"), nowMillis = { now })
 
         repeat(10) { assertEquals(AccessVerdict.Wrong, guard.check("a", "bad")) }
         assertEquals(AccessVerdict.Throttled, guard.check("a", "k"))
@@ -170,7 +170,7 @@ class AccessKeyTest {
 
     @Test
     fun `no keys configured means everything is allowed`() {
-        val guard = AccessKeyGuard(emptyList())
+        val guard = AccessKeyGuard.ofKeys(emptyList())
         assertEquals(AccessVerdict.Allowed, guard.check("a", null))
         assertEquals(false, guard.required)
     }

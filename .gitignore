@@ -53,3 +53,6 @@ graphify-out/
 !.env.example
 ### Release build output (build-release.bat) ###
 /release/
+
+### Admin panel state (hashed password, master key hash) ###
+data/

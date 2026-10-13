@@ -1,6 +1,9 @@
 package com.eeck.server.app
 
 import com.eeck.server.core.config.ServerConfig
+import com.eeck.server.features.auth.service.AuthService
+import com.eeck.server.features.auth.store.AuthFileStore
+import java.io.File
 import com.eeck.server.core.http.AccessKeyGuard
 import com.eeck.server.core.ws.ConnectionLimiter
 import com.eeck.server.core.ws.MAX_CONNECTIONS_PER_CLIENT
@@ -24,7 +27,12 @@ class AppModule(val config: ServerConfig = ServerConfig()) {
     val chatConnectionLimiter = ConnectionLimiter(MAX_CONNECTIONS_PER_CLIENT)
 
     /** One guard for every protected route, so wrong-key attempts share a single budget per client. */
-    val accessKeyGuard = AccessKeyGuard(config.accessKeys)
+    val authService = AuthService(
+        envPasswords = config.accessKeys,
+        envMasterKey = config.masterKey,
+        store = AuthFileStore(config.dataDir?.let { File(it, "auth.json") }),
+    )
+    val accessKeyGuard = AccessKeyGuard(authService)
 
     val sessionStore: SessionStore = InMemorySessionStore()
 

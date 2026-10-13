@@ -15,17 +15,10 @@ import io.ktor.server.routing.RouteSelectorEvaluation
 import io.ktor.server.routing.RoutingResolveContext
 import io.ktor.server.application.install
 import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
 
 /** Header carrying the key on REST calls. A WebSocket handshake cannot set headers, so `/ws` takes it as `?key=`. */
 const val ACCESS_KEY_HEADER = "X-Eeck-Key"
 const val ACCESS_KEY_PARAM = "key"
-
-private const val MAX_FAILURES_PER_WINDOW = 10
-private const val FAILURE_WINDOW_MS = 60_000L
-
-/** Above this many tracked clients, stale entries are swept so the map cannot be grown without bound. */
-private const val SWEEP_THRESHOLD = 4_096
 
 sealed interface AccessVerdict {
     data object Allowed : AccessVerdict
@@ -35,63 +28,58 @@ sealed interface AccessVerdict {
 }
 
 /**
- * Decides whether a request holds one of the server's access keys, and slows
- * down clients that keep guessing. One instance serves every protected route,
- * so the failure budget is per client address, not per route.
+ * What the server accepts as proof of access. Declared here, in `core`, so the
+ * gate need not know where credentials come from (a fixed list, or the auth
+ * feature's passwords, one-time codes and sessions).
+ */
+interface AccessCredentials {
+    /** False means the server is open and nothing is checked. */
+    val required: Boolean
+
+    fun accepts(provided: String): Boolean
+}
+
+/** A fixed set of accepted keys: what `EECK_ACCESS_KEY` alone gave before accounts existed. */
+class StaticAccessKeys(keys: List<String>) : AccessCredentials {
+    private val accepted = keys.map(::digest)
+
+    override val required: Boolean get() = accepted.isNotEmpty()
+
+    override fun accepts(provided: String): Boolean {
+        val providedDigest = digest(provided)
+        var matched = false
+        // Every key is compared with no early exit, so which one matched is not observable.
+        for (key in accepted) matched = MessageDigest.isEqual(key, providedDigest) || matched
+        return matched
+    }
+}
+
+/**
+ * Decides whether a request holds an accepted credential, and slows down clients
+ * that keep guessing. One instance serves every protected route, so the failure
+ * budget is per client address, not per route.
  *
- * Keys are compared as SHA-256 digests with [MessageDigest.isEqual], and every
- * configured key is compared with no early exit, so neither a key's length or
- * content, nor which of several matched, shows in response timing. The guard
- * is only as strong as the cost of guessing, so pick a long random key.
- *
- * With no keys configured the server is open and [check] always allows.
+ * With nothing required, [check] always allows.
  */
 class AccessKeyGuard(
-    keys: List<String>,
-    private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val credentials: AccessCredentials,
+    val limiter: AttemptLimiter = AttemptLimiter(),
 ) {
-    private val accepted = keys.map(::digest)
-    private val failures = ConcurrentHashMap<String, ArrayDeque<Long>>()
-
-    val required: Boolean get() = accepted.isNotEmpty()
+    val required: Boolean get() = credentials.required
 
     fun check(client: String, provided: String?): AccessVerdict {
         if (!required) return AccessVerdict.Allowed
-        if (isThrottled(client)) return AccessVerdict.Throttled
-        // An empty value is the same as none: it must never match, even a key someone left blank.
+        if (limiter.isThrottled(client)) return AccessVerdict.Throttled
+        // An empty value is the same as none: it must never match.
         if (provided.isNullOrEmpty()) return AccessVerdict.Missing
-        val providedDigest = digest(provided)
-        var matched = false
-        for (key in accepted) matched = MessageDigest.isEqual(key, providedDigest) || matched
-        if (matched) return AccessVerdict.Allowed
-        recordFailure(client)
+        if (credentials.accepts(provided)) return AccessVerdict.Allowed
+        limiter.recordFailure(client)
         return AccessVerdict.Wrong
     }
 
-    private fun isThrottled(client: String): Boolean {
-        val log = failures[client] ?: return false
-        synchronized(log) {
-            prune(log)
-            return log.size >= MAX_FAILURES_PER_WINDOW
-        }
-    }
-
-    private fun recordFailure(client: String) {
-        if (failures.size > SWEEP_THRESHOLD) sweep()
-        val log = failures.computeIfAbsent(client) { ArrayDeque() }
-        synchronized(log) { log.addLast(nowMillis()) }
-    }
-
-    private fun prune(log: ArrayDeque<Long>) {
-        val cutoff = nowMillis() - FAILURE_WINDOW_MS
-        while (log.isNotEmpty() && log.first() < cutoff) log.removeFirst()
-    }
-
-    private fun sweep() {
-        for ((client, log) in failures) {
-            val empty = synchronized(log) { prune(log); log.isEmpty() }
-            if (empty) failures.remove(client, log)
-        }
+    companion object {
+        fun ofKeys(keys: List<String>, nowMillis: () -> Long = System::currentTimeMillis): AccessKeyGuard =
+            AccessKeyGuard(StaticAccessKeys(keys), AttemptLimiter(nowMillis = nowMillis))
     }
 }
 
@@ -124,8 +112,8 @@ val AccessKeyGate = createRouteScopedPlugin("AccessKeyGate", ::AccessKeyGateConf
             ?: if (allowQuery) call.request.queryParameters[ACCESS_KEY_PARAM] else null
         when (guard.check(call.clientKey(), provided)) {
             AccessVerdict.Allowed -> Unit
-            AccessVerdict.Missing -> call.refuse(HttpStatusCode.Unauthorized, "This server needs an access key.")
-            AccessVerdict.Wrong -> call.refuse(HttpStatusCode.Unauthorized, "Wrong access key.")
+            AccessVerdict.Missing -> call.refuse(HttpStatusCode.Unauthorized, "This server needs a password or a one-time code.")
+            AccessVerdict.Wrong -> call.refuse(HttpStatusCode.Unauthorized, "Your sign-in is no longer valid. Enter the password or a new code.")
             AccessVerdict.Throttled ->
                 call.refuse(HttpStatusCode.TooManyRequests, "Too many wrong access keys. Try again in a minute.")
         }

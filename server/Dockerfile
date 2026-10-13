@@ -33,6 +33,13 @@ RUN useradd --system --uid 10001 --create-home eeck
 WORKDIR /app
 COPY --from=build /src/server/build/install/server ./
 
+# What the admin panel changes (the server password, the master key's hash) is written to
+# /app/data/auth.json. Created and owned here so a fresh named volume mounted over it
+# inherits an owner the unprivileged user can write to.
+RUN mkdir -p /app/data && chown eeck:eeck /app/data
+ENV EECK_DATA_DIR=/app/data
+VOLUME /app/data
+
 # Ktor's embeddedServer already binds 0.0.0.0, which is what a container needs.
 ENV EECK_PORT=3001
 EXPOSE 3001

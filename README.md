@@ -83,31 +83,49 @@ for one first (`EECK_SERVER_MODE`, baked in at build time):
 (`?server=…&chatId=…`), so whoever opens it connects to the same server; the
 address is checked against `/api/health` before continuing.
 
-### Access key
+### Access, passwords and the admin panel
 
-Put it in a file named **`.env`** in the project root (copy `.env.example`; typing it into
-`.env.example` does nothing, nothing reads that file). `docker compose` reads `.env` by itself, and
-the server reads it too when started any other way (IntelliJ, `./gradlew :server:run`, the
-release scripts), looking in the working directory and the two folders above it; a real
-environment variable still wins over the file. **Restart the server after changing it**: it logs
-`Configuration read from: ...` and `Access key required: N key(s)` at startup, so you can see it
-took effect.
+A server can require a **password** (`EECK_ACCESS_KEY`, or the one set in the admin panel). Without it
+everything except `/api/health` is refused: no creating links, no joining chats, no WebSocket. People
+type the password, **or a one-time code**, on the first screen; the server trades it for a session
+token (`POST /api/auth/login`) and the client remembers only that token, never the secret. That is what
+lets a one-time code be spent exactly once. Wrong guesses are limited to 10 a minute per address, so a
+password is only as strong as it is long.
 
-Set `EECK_ACCESS_KEY` on a server (several keys, comma separated, are all
-accepted, which lets you rotate) and it refuses everything except `/api/health`
-without that key: no creating links, no joining chats. The client sees from
-`/api/health` that a key is required and asks for it on the first screen, then
-checks it and remembers it per server in that browser. It is never put in a
-chat link. A WebSocket handshake cannot carry headers, so `/ws` takes it as
-`?key=` (REST accepts only the header); the server and the bundled nginx never log
-query strings. The check sits on the protected routes themselves, so no spelling of a
-URL gets past it. The server logs at startup whether a key is required, and every
-refusal with the client address. If a browser's key stops working (changed and the
-server restarted), the client notices and returns to the key prompt instead of
-retrying forever. Wrong keys
-are rate-limited (10 per minute per address), so the key is only as strong as
-its length: use something like `openssl rand -hex 24`. A same-origin build asks
-only for the key. Leaving the variable empty keeps the server open.
+**One-time codes** are made in the admin panel: generated (10 characters, no look-alikes) or typed by the
+admin (at least 8 characters, not a common one, not equal to the password). Each lives from a minute up
+to a year (5 minutes, 15 minutes, 1 hour, 6 hours, 24 hours, 1 week, 1 month, 3 months, 1 year) and
+works once. Only hashes are kept, in memory; a restart forgets them.
+
+**The admin panel** is served by the chat server itself at `/admin` (server-rendered, no separate app to
+host). It signs in with the **master key** and nothing else:
+
+- Set it in **`.env`**: `EECK_MASTER_KEY=...`. If it is not set, the server generates a random key
+  **for that run only and prints it in its log at start** (`Admin master key (EECK_MASTER_KEY is not
+  set ...)`). That key lives in memory, is written nowhere else, and is different after every restart.
+- The **Server access** tile is a dropdown: **Protected** (a password or one-time code is required) or
+  **All accepted** (nobody is asked, the password and unspent codes are kept for when you switch back).
+  The choice is saved in `auth.json` and wins over `EECK_ACCESS_KEY`; it applies to whoever connects next,
+  people already connected are not dropped. Protected with no password set means only one-time codes get in.
+- In the panel you can change the server password (kept across restarts, and then it replaces
+  `EECK_ACCESS_KEY`), create and revoke one-time codes, and sign everybody out.
+- Its session is an `HttpOnly`, `SameSite=Strict` cookie; every form carries an anti-forgery token;
+  failed sign-ins are limited to 5 a minute per address. `EECK_ADMIN_ENABLED=false` removes it.
+- Through the bundled nginx it is at `http://<host>/admin`; in relay mode the relay does not forward it,
+  open the server's own address instead. Because it is on the public port, give it a long master key.
+
+What the panel changes lives in `auth.json` in `EECK_DATA_DIR` (default `data/`; `/app/data` in Docker,
+a named volume, **keep it or the changed password is lost with the container**). It holds the server
+password as text, so the panel can show it, and the access mode; the master key is never stored. The file
+only appears once you change one of them in the panel, and it should be readable by the server user only.
+The **Server password** tile shows the password masked (`********`): clicking it fetches and shows it,
+clicking again hides it, and it is never in the page source. A password set by an older version was
+stored as a hash: it still works but cannot be shown until you change it once.
+
+Settings come from the environment, and from a file named **`.env`** in the working directory
+or the two folders above it (never `.env.example`); a real variable wins over the file. At startup the
+server logs where it read them from and whether a password is required. Sessions and codes are in
+memory, so run one server instance, and a restart signs people out.
 
 Config is optional — copy `.env.example` to `.env` to change the published port.
 
