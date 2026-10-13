@@ -1,4 +1,5 @@
 export { onAccessDenied, reportAccessDenied, authHeaders, httpUrl, socketUrl, SAME_ORIGIN, type ServerEndpoint } from './endpoint'
+export { login, type LoginResponse } from './chat-link'
 export { checkAccess, checkHealth, createLink, deleteLink, getLinkStatus, type LinkResponse, type StatusResponse } from './chat-link'
 export {
     E2eeClient,

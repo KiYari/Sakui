@@ -96,7 +96,7 @@ export function App() {
                         stage: {
                             name: 'choose',
                             prefill: current.server === SAME_ORIGIN_SERVER ? undefined : current.server,
-                            error: `${message} Enter the server's current access key.`,
+                            error: `${message} Enter the password or a one-time code.`,
                         },
                     }
                 })

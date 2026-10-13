@@ -9,7 +9,7 @@ import {
     SAME_ORIGIN_SERVER,
     type ServerMode,
 } from '../../../shared/lib/server-target'
-import { probeServer } from '../model/probeServer'
+import { signInToServer } from '../model/probeServer'
 import './ServerPicker.css'
 
 interface ServerPickerProps {
@@ -18,38 +18,41 @@ interface ServerPickerProps {
     initialServer?: string
     /** Shown before anything is typed, e.g. why a link's own server was refused. */
     initialError?: string
-    /** [key] is set only when the server asked for one. */
-    onSelect: (server: string, key?: string) => void
+    /** [token] is the session this sign-in opened; absent when the server asked for nothing. */
+    onSelect: (server: string, token?: string) => void
 }
 
 /**
- * Asks which chat server to use — and, if that server wants one, its access
- * key — and checks both before moving on: a typo should fail here, not as a
+ * Asks which chat server to use — and, if that server is protected, the password
+ * or one-time code — and checks both before moving on: a typo should fail here, not as a
  * chat that silently never connects. A same-origin build has no address to
- * ask for, so this shrinks to just the key.
+ * ask for, so this shrinks to just the password or code.
  */
 export function ServerPicker({ mode, initialServer, initialError, onSelect }: ServerPickerProps) {
     const sameOrigin = mode === 'same-origin'
     const [input, setInput] = useState(initialServer ?? '')
-    const [key, setKey] = useState(() => keyFor(initialServer ?? SAME_ORIGIN_SERVER) ?? '')
+    // What is typed is a password or a one-time code and is never remembered; only the session token it buys is.
+    const [secret, setSecret] = useState('')
     const [recent, setRecent] = useState(() => recentServers())
     const [error, setError] = useState<string | null>(initialError ?? null)
     const [checking, setChecking] = useState(false)
 
-    const connect = async (rawAddress: string, rawKey: string) => {
+    const connect = async (rawAddress: string, rawSecret: string) => {
         const parsed = sameOrigin ? { ok: true as const, server: SAME_ORIGIN_SERVER } : parseServer(rawAddress, mode)
         if (!parsed.ok) {
             setError(parsed.error)
             return
         }
-        const accessKey = rawKey.trim() || undefined
         setChecking(true)
         setError(null)
-        const result = await probeServer({ ...endpointFor(parsed.server, mode), key: accessKey })
+        const result = await signInToServer(endpointFor(parsed.server, mode), {
+            secret: rawSecret,
+            savedToken: keyFor(parsed.server),
+        })
         setChecking(false)
         if (result.status === 'ok') {
-            // A key the server never asked for is not worth keeping.
-            onSelect(parsed.server, result.keyRequired ? accessKey : undefined)
+            setSecret('')
+            onSelect(parsed.server, result.token)
         } else {
             setError(result.error)
         }
@@ -57,7 +60,7 @@ export function ServerPicker({ mode, initialServer, initialError, onSelect }: Se
 
     const handleSubmit = (event: FormEvent) => {
         event.preventDefault()
-        void connect(input, key)
+        void connect(input, secret)
     }
 
     return (
@@ -78,10 +81,10 @@ export function ServerPicker({ mode, initialServer, initialError, onSelect }: Se
                 )}
                 <input
                     type="password"
-                    value={key}
-                    onChange={(e) => setKey(e.target.value)}
-                    placeholder={sameOrigin ? 'Access key' : 'Access key (if the server needs one)'}
-                    aria-label="Access key"
+                    value={secret}
+                    onChange={(e) => setSecret(e.target.value)}
+                    placeholder={sameOrigin ? 'Password or one-time code' : 'Password or one-time code (if the server needs one)'}
+                    aria-label="Password or one-time code"
                     autoComplete="off"
                     autoFocus={sameOrigin}
                     disabled={checking}
@@ -109,10 +112,8 @@ export function ServerPicker({ mode, initialServer, initialError, onSelect }: Se
                                 className="secondary"
                                 disabled={checking}
                                 onClick={() => {
-                                    const saved = keyFor(server) ?? ''
                                     setInput(server)
-                                    setKey(saved)
-                                    void connect(server, saved)
+                                    void connect(server, secret)
                                 }}
                             >
                                 {server}

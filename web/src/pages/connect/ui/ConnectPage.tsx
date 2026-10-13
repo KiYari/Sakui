@@ -14,7 +14,7 @@ interface ConnectPageProps {
 
 function subtitleFor(mode: ServerMode, joiningChat: boolean): string {
     // A same-origin build only lands here when its one server asks for a key.
-    if (mode === 'same-origin') return 'This server is protected. Enter its access key to continue.'
+    if (mode === 'same-origin') return 'This server is protected. Enter its password or a one-time code to continue.'
     return joiningChat ? 'Which server is this chat on?' : 'Which server do you want to connect to?'
 }
 

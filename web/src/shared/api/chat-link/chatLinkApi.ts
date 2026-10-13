@@ -8,6 +8,13 @@ export interface LinkResponse {
     ownerToken: string
 }
 
+export interface LoginResponse {
+    /** What to send instead of the password from now on: the session this sign-in opened. */
+    token: string
+    method: 'password' | 'one-time-code'
+    expiresAtMillis: number
+}
+
 export interface StatusResponse {
     status: string
     state: string
@@ -17,7 +24,7 @@ interface ApiErrorBody {
     error?: string
 }
 
-async function parseJsonOrThrow<T>(res: Response): Promise<T> {
+async function parseJsonOrThrow<T>(res: Response, options: { reportDenied?: boolean } = {}): Promise<T> {
     // Error responses can come from a proxy or a plugin rather than the app, and
     // may carry no JSON at all; that must still read as a sensible message.
     let body: (T & ApiErrorBody) | undefined
@@ -28,7 +35,7 @@ async function parseJsonOrThrow<T>(res: Response): Promise<T> {
     }
     if (!res.ok) {
         // The server no longer accepts our key: tell the app, which sends the user to the key prompt.
-        if (res.status === 401) reportAccessDenied(body?.error ?? 'The access key was not accepted.')
+        if (res.status === 401 && options.reportDenied !== false) reportAccessDenied(body?.error ?? 'The access key was not accepted.')
         if (res.status === 429) throw new Error(body?.error ?? 'Too many requests from here. Try again in a minute.')
         throw new Error(body?.error ?? `Request failed with status ${res.status}`)
     }
@@ -87,4 +94,19 @@ export async function deleteLink(endpoint: ServerEndpoint, chatId: string, owner
         headers: { ...authHeaders(endpoint), Authorization: `Bearer ${ownerToken}` },
     })
     await parseJsonOrThrow(res)
+}
+
+/**
+ * Trades the server password, or a one-time code, for a session token. A code is
+ * spent by this call and can never be used again, which is why clients keep the
+ * token and not the secret. A refusal here is the answer to what the user typed,
+ * not a sign that a stored token went stale, so it is not reported as such.
+ */
+export async function login(endpoint: ServerEndpoint, secret: string): Promise<LoginResponse> {
+    const res = await fetch(httpUrl(endpoint, '/api/auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret }),
+    })
+    return parseJsonOrThrow<LoginResponse>(res, { reportDenied: false })
 }
